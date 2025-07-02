@@ -4,7 +4,7 @@
  * Plugin URI: https://yoursite.com
  * Description: Interactive election simulation tool for all 39 Bahamian constituencies with proper Nassau division
  * Version: 2.0.0
- * Author: Your Name
+ * Author: Sanwal Bajwa
  * License: GPL v2 or later
  */
 
