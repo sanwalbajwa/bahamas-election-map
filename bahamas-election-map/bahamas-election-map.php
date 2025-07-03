@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Bahamas Interactive Election Map - Enhanced
- * Plugin URI: https://yoursite.com
- * Description: Interactive election simulation tool for all 39 Bahamian constituencies with proper Nassau division
+ * Plugin URI: https://sanwalbajwa.live/
+ * Description: Interactive election simulation tool for all 39 Bahamian constituencies
  * Version: 2.0.0
  * Author: Sanwal Bajwa
  * License: GPL v2 or later
@@ -22,31 +22,31 @@ class BahamasElectionMapEnhanced {
     
     // Nassau constituency mapping based on the PDF key provided
     private $nassau_constituencies = array(
-        1 => 'Killarney',           
-        2 => 'Golden Isles',        
-        3 => 'Southern Shores',     
-        4 => 'Tall Pines',          
-        5 => 'Carmichael',          
-        6 => 'South Beach',         
-        7 => 'Seabreeze',           
-        8 => 'Elizabeth',           
-        9 => 'Yamacraw',            
-        10 => 'St Annes',           
-        11 => 'Fox Hill',           
-        12 => 'Nassau Village',     
-        13 => 'Pinewood',           
-        14 => 'Bamboo Town',        
-        15 => 'Golden Gates',       
-        16 => 'Garden Hills',       
-        17 => 'Mt. Moriah',         
-        18 => 'Nassau South',       
-        19 => 'Englerston',         
-        20 => 'Marathon',           
-        21 => 'Freetown',           
-        22 => 'Centreville',        
-        23 => 'Bains Town & Grants Town',
-        24 => 'Fort Charlotte'      
-    );
+    1 => 'Killarney',           
+    2 => 'Golden Isles',        
+    3 => 'Southern Shores',     
+    4 => 'Tall Pines',          
+    5 => 'Carmichael',          
+    6 => 'South Beach',         
+    7 => 'Seabreeze',           
+    8 => 'Elizabeth',           
+    9 => 'Yamacraw',            
+    10 => 'St Annes',           
+    11 => 'Fox Hill',           
+    12 => 'Nassau Village',     
+    13 => 'Pinewood',           
+    14 => 'Bamboo Town',        
+    15 => 'Golden Gates',       
+    16 => 'Garden Hills',       
+    17 => 'Mt. Moriah',         
+    18 => 'St. Barnabas',       // Corrected from 'Nassau South'
+    19 => 'Englerston',         
+    20 => 'Marathon',           
+    21 => 'Freetown',           
+    22 => 'Centreville',        
+    23 => 'Bains Town & Grants Town',
+    24 => 'Fort Charlotte'      
+);
     
     // Grand Bahama constituencies (5 total)
     private $grand_bahama_constituencies = array(
@@ -72,17 +72,19 @@ class BahamasElectionMapEnhanced {
     );
     
     public function __construct() {
-        add_action('init', array($this, 'init'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_shortcode('bahamas_election_map', array($this, 'render_map_shortcode'));
-        register_activation_hook(__FILE__, array($this, 'activate'));
-        add_action('wp_ajax_update_constituency', array($this, 'ajax_update_constituency'));
-        add_action('wp_ajax_nopriv_update_constituency', array($this, 'ajax_update_constituency'));
-        add_action('wp_ajax_reset_map', array($this, 'ajax_reset_map'));
-        add_action('wp_ajax_nopriv_reset_map', array($this, 'ajax_reset_map'));
-        add_action('wp_ajax_get_svg_map', array($this, 'ajax_get_svg_map'));
-        add_action('wp_ajax_nopriv_get_svg_map', array($this, 'ajax_get_svg_map'));
-    }
+    add_action('init', array($this, 'init'));
+    add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
+    add_shortcode('bahamas_election_map', array($this, 'render_map_shortcode'));
+    register_activation_hook(__FILE__, array($this, 'activate'));
+    
+    // AJAX handlers - make sure these are properly registered
+    add_action('wp_ajax_update_constituency', array($this, 'ajax_update_constituency'));
+    add_action('wp_ajax_nopriv_update_constituency', array($this, 'ajax_update_constituency'));
+    add_action('wp_ajax_get_svg_map', array($this, 'ajax_get_svg_map'));
+    add_action('wp_ajax_nopriv_get_svg_map', array($this, 'ajax_get_svg_map'));
+    
+    add_shortcode('debug_bahamas', array($this, 'debug_shortcode'));
+}
     
     public function init() {
         $this->create_tables();
@@ -117,63 +119,72 @@ class BahamasElectionMapEnhanced {
         dbDelta($sql);
     }
     
-    public function insert_default_data() {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'bahamas_constituencies';
+   public function insert_default_data() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'bahamas_constituencies';
+    
+    // Check if data already exists
+    $count = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+    if ($count > 0) return;
+    
+    // CORRECT 2021 ELECTION RESULTS
+    // FNM won these 6 constituencies (we're missing St. Barnabas number)
+    $fnm_constituencies = array(1, 10, 26, 28, 29, 36);
+    
+    // Insert Nassau constituencies (1-24)
+    foreach ($this->nassau_constituencies as $number => $name) {
+        $party = in_array($number, $fnm_constituencies) ? 'FNM' : 'PLP';
         
-        // Check if data already exists
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
-        if ($count > 0) return;
-        
-        // Insert Nassau constituencies (1-24)
-        foreach ($this->nassau_constituencies as $number => $name) {
-            $wpdb->insert(
-                $table_name,
-                array(
-                    'constituency_number' => $number,
-                    'constituency_name' => $name,
-                    'current_party' => 'PLP', // Most Nassau seats went PLP in 2021
-                    'current_mp' => 'TBD',
-                    'island' => 'New Providence',
-                    'region' => 'Nassau',
-                    'is_simulation' => 0
-                )
-            );
-        }
-        
-        // Insert Grand Bahama constituencies (25-29)
-        foreach ($this->grand_bahama_constituencies as $number => $name) {
-            $wpdb->insert(
-                $table_name,
-                array(
-                    'constituency_number' => $number,
-                    'constituency_name' => $name,
-                    'current_party' => ($number == 26 || $number == 28 || $number == 29) ? 'FNM' : 'PLP',
-                    'current_mp' => 'TBD',
-                    'island' => 'Grand Bahama',
-                    'region' => 'Grand Bahama',
-                    'is_simulation' => 0
-                )
-            );
-        }
-        
-        // Insert Family Islands constituencies (30-39)
-        foreach ($this->family_islands_constituencies as $number => $name) {
-            $wpdb->insert(
-                $table_name,
-                array(
-                    'constituency_number' => $number,
-                    'constituency_name' => $name,
-                    'current_party' => ($number == 36) ? 'FNM' : 'PLP', // Long Island is FNM
-                    'current_mp' => 'TBD',
-                    'island' => 'Family Islands',
-                    'region' => 'Family Islands',
-                    'is_simulation' => 0
-                )
-            );
-        }
+        $wpdb->insert(
+            $table_name,
+            array(
+                'constituency_number' => $number,
+                'constituency_name' => $name,
+                'current_party' => $party,
+                'current_mp' => 'TBD',
+                'island' => 'New Providence',
+                'region' => 'Nassau',
+                'is_simulation' => 0
+            )
+        );
     }
     
+    // Insert Grand Bahama constituencies (25-29)
+    foreach ($this->grand_bahama_constituencies as $number => $name) {
+        $party = in_array($number, $fnm_constituencies) ? 'FNM' : 'PLP';
+        
+        $wpdb->insert(
+            $table_name,
+            array(
+                'constituency_number' => $number,
+                'constituency_name' => $name,
+                'current_party' => $party,
+                'current_mp' => 'TBD',
+                'island' => 'Grand Bahama',
+                'region' => 'Grand Bahama',
+                'is_simulation' => 0
+            )
+        );
+    }
+    
+    // Insert Family Islands constituencies (30-39)
+    foreach ($this->family_islands_constituencies as $number => $name) {
+        $party = in_array($number, $fnm_constituencies) ? 'FNM' : 'PLP';
+        
+        $wpdb->insert(
+            $table_name,
+            array(
+                'constituency_number' => $number,
+                'constituency_name' => $name,
+                'current_party' => $party,
+                'current_mp' => 'TBD',
+                'island' => 'Family Islands',
+                'region' => 'Family Islands',
+                'is_simulation' => 0
+            )
+        );
+    }
+}
     public function enqueue_scripts() {
         wp_enqueue_script(
             'bahamas-election-enhanced-js',
@@ -257,14 +268,10 @@ class BahamasElectionMapEnhanced {
             
             <!-- Map Controls -->
             <div class="map-controls">
-                <button id="reset-map" class="btn btn-reset">Reset to 2021 Results</button>
                 <button id="share-simulation" class="btn btn-share">Share Simulation</button>
                 <button id="download-svg" class="btn btn-download">Download Map</button>
                 <label>
                     <input type="checkbox" id="colorblind-mode"> Colorblind Mode
-                </label>
-                <label>
-                    <input type="checkbox" id="show-numbers" checked> Show Constituency Numbers
                 </label>
             </div>
             
@@ -337,6 +344,120 @@ class BahamasElectionMapEnhanced {
         return ob_get_clean();
     }
     
+	public function enhance_official_svg($svg_content) {
+    // Check if SVG content is valid
+    if (!$svg_content || strlen($svg_content) < 100) {
+        return $this->generate_enhanced_svg();
+    }
+    
+    // Load XML safely
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument();
+    $dom->loadXML($svg_content);
+    
+    if (libxml_get_errors()) {
+        libxml_clear_errors();
+        return $this->generate_enhanced_svg();
+    }
+    
+    $paths = $dom->getElementsByTagName('path');
+    $manual_mapping = $this->get_manual_svg_mapping();
+    
+    $mapped_count = 0;
+    $unmapped_paths = array();
+    
+    foreach ($paths as $path) {
+        $path_id = $path->getAttribute('id');
+        
+        // Check if this path is in our manual mapping
+        if (isset($manual_mapping[$path_id])) {
+            $constituency_number = $manual_mapping[$path_id];
+            
+            // Add interactive attributes
+            $path->setAttribute('class', 'constituency-path interactive');
+            $path->setAttribute('data-constituency', $constituency_number);
+            $path->setAttribute('data-path-id', $path_id);
+            
+            // Store original fill for reference
+            $original_fill = $path->getAttribute('fill');
+            if ($original_fill) {
+                $path->setAttribute('data-original-fill', $original_fill);
+            }
+            
+            // Add interactive styles
+            $path->setAttribute('style', 'cursor: pointer; transition: filter 0.2s ease; stroke: #333; stroke-width: 1;');
+            
+            $mapped_count++;
+        } else {
+            $unmapped_paths[] = $path_id;
+        }
+    }
+    
+    // Add enhanced CSS styles
+    $style = $dom->createElement('style');
+    $style->appendChild($dom->createTextNode('
+        .constituency-path { 
+            cursor: pointer; 
+            stroke: #333; 
+            stroke-width: 1;
+            transition: filter 0.2s ease;
+        }
+        
+        .constituency-path:hover { 
+            filter: brightness(1.1);
+        }
+        
+        .constituency-path.selected {
+            filter: brightness(1.2);
+            stroke-width: 2;
+        }
+        
+        .constituency-label { 
+            font-family: Arial, sans-serif; 
+            font-size: 11px; 
+            font-weight: bold; 
+            pointer-events: none; 
+            text-anchor: middle; 
+        }
+    '));
+    
+    // Add styles to defs section
+    $defs = $dom->getElementsByTagName('defs')->item(0);
+    if (!$defs) {
+        $defs = $dom->createElement('defs');
+        $dom->documentElement->insertBefore($defs, $dom->documentElement->firstChild);
+    }
+    $defs->appendChild($style);
+    
+    // Add JavaScript for interaction
+    $script = $dom->createElement('script');
+    $script->setAttribute('type', 'text/javascript');
+    $script->appendChild($dom->createCDATASection('
+        console.log("=== SVG MAPPING DEBUG ===");
+        console.log("Mapped constituencies: ' . $mapped_count . '");
+        console.log("Unmapped paths: ' . json_encode($unmapped_paths) . '");
+        
+        // Make selectConstituency globally available
+        if (typeof window.selectConstituency === "undefined") {
+            window.selectConstituency = function(constituencyId) {
+                console.log("SVG selectConstituency called for:", constituencyId);
+                
+                // Trigger click event that the main JS will handle
+                var event = new CustomEvent("constituencySelect", {
+                    detail: { constituencyId: constituencyId }
+                });
+                document.dispatchEvent(event);
+            };
+        }
+        
+        console.log("=== SVG SETUP COMPLETE ===");
+    '));
+    
+    $dom->appendChild($script);
+    
+    return $dom->saveXML();
+}
+	
     // Generate the enhanced SVG map with proper Nassau focus
     public function generate_enhanced_svg() {
         global $wpdb;
@@ -347,7 +468,7 @@ class BahamasElectionMapEnhanced {
         $svg .= '<defs>';
         $svg .= '<style>';
         $svg .= '.constituency-path { cursor: pointer; stroke: #333; stroke-width: 1.5; transition: all 0.3s ease; }';
-        $svg .= '.constituency-path:hover { stroke-width: 3; filter: brightness(1.1); transform: scale(1.02); }';
+        $svg .= '.constituency-path:hover { stroke-width: 3; filter: brightness(1.1); }';
         $svg .= '.constituency-label { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; pointer-events: none; text-anchor: middle; }';
         $svg .= '.region-title { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; fill: #2c3e50; }';
         $svg .= '.region-subtitle { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; fill: #7f8c8d; }';
@@ -573,56 +694,128 @@ class BahamasElectionMapEnhanced {
         return isset($colors[$party]) ? $colors[$party] : '#CCCCCC';
     }
     
-    // AJAX handlers
     public function ajax_get_svg_map() {
-        check_ajax_referer('bahamas_election_nonce', 'nonce');
-        
-        $svg = $this->generate_enhanced_svg();
-        
-        wp_send_json_success(array(
-            'svg' => $svg
-        ));
+    // Verify nonce
+    if (!check_ajax_referer('bahamas_election_nonce', 'nonce', false)) {
+        wp_send_json_error('Invalid nonce');
+        return;
     }
     
-    public function ajax_update_constituency() {
-        check_ajax_referer('bahamas_election_nonce', 'nonce');
+    // Try to load official SVG file first
+    $svg_path = BAHAMAS_ELECTION_PLUGIN_DIR . 'assets/bahamas-official-map.svg';
+    
+    if (file_exists($svg_path)) {
+        // Load and enhance the official SVG
+        $svg_content = file_get_contents($svg_path);
         
-        $constituency_id = intval($_POST['constituency_id']);
-        $new_party = sanitize_text_field($_POST['new_party']);
-        
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'bahamas_constituencies';
-        
-        $result = $wpdb->update(
-            $table_name,
-            array('current_party' => $new_party, 'is_simulation' => 1),
-            array('constituency_number' => $constituency_id),
-            array('%s', '%d'),
-            array('%d')
-        );
-        
-        if ($result !== false) {
+        if ($svg_content && strlen($svg_content) > 100) {
+            $enhanced_svg = $this->enhance_official_svg($svg_content);
+            
             wp_send_json_success(array(
-                'message' => 'Constituency updated successfully',
-                'constituency_id' => $constituency_id,
-                'new_party' => $new_party
+                'svg' => $enhanced_svg,
+                'source' => 'official_enhanced',
+                'message' => 'Official SVG loaded and enhanced'
             ));
-        } else {
-            wp_send_json_error('Failed to update constituency');
+            return;
         }
     }
     
-    public function ajax_reset_map() {
-        check_ajax_referer('bahamas_election_nonce', 'nonce');
-        
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'bahamas_constituencies';
-        
-        // Reset all simulations back to original 2021 results
-        $wpdb->query("UPDATE $table_name SET is_simulation = 0");
-        
-        wp_send_json_success('Map reset to 2021 results');
+    // Fallback to generated SVG
+    $generated_svg = $this->generate_enhanced_svg();
+    
+    if ($generated_svg && strlen($generated_svg) > 100) {
+        wp_send_json_success(array(
+            'svg' => $generated_svg,
+            'source' => 'generated',
+            'message' => 'Generated SVG created successfully'
+        ));
+        return;
     }
+    
+    // If both fail, send error
+    wp_send_json_error(array(
+        'message' => 'Failed to load SVG map',
+        'svg_path_exists' => file_exists($svg_path),
+        'svg_path' => $svg_path
+    ));
+}
+    
+    public function ajax_update_constituency() {
+    check_ajax_referer('bahamas_election_nonce', 'nonce');
+    
+    $constituency_id = intval($_POST['constituency_id']);
+    $new_party = sanitize_text_field($_POST['new_party']);
+    
+    // DO NOT update database - simulations are client-side only
+    wp_send_json_success(array(
+        'message' => 'Simulation updated (client-side only)',
+        'constituency_id' => $constituency_id,
+        'new_party' => $new_party,
+        'note' => 'Changes are temporary and will reset on page reload'
+    ));
+}
+	private function get_manual_svg_mapping() {
+    return array(
+        // Nassau Constituencies (1-24)
+        'path16590' => 1,   // Killarney
+        'path16592' => 2,   // Golden Isles
+        'path16594' => 3,   // Southern Shores
+        'path16596' => 4,   // Tall Pines
+        'path16622' => 5,   // Carmichael
+        'path16600' => 6,   // South Beach
+        'path16602' => 7,   // Seabreeze
+        'path16632' => 8,   // Elizabeth
+        'path16614' => 9,   // Yamacraw
+        'path16598' => 10,  // St Annes
+        'path16608' => 11,  // Fox Hill
+        'path16624' => 12,  // Nassau Village
+        'path16630' => 13,  // Pinewood
+        'path16616' => 14,  // Bamboo Town
+        'path16620' => 15,  // Golden Gates
+        'path16604' => 16,  // Garden Hills
+        'path16610' => 17,  // Mt. Moriah
+        'path16612' => 18,  // St. Barnabas
+        'path16628' => 19,  // Englerston
+        'path16606' => 20,  // Marathon
+        'path16634' => 21,  // Freetown
+        'path16618' => 22,  // Centreville
+        'path16626' => 23,  // Bains Town & Grants Town
+        'path16636' => 24,  // Fort Charlotte
+
+        // Grand Bahama Constituencies (25-29)
+        'path16650' => 25,  // West Grand Bahama & Bimini
+        'path16644' => 26,  // Grand Central Bahama
+        'path16648' => 27,  // Pineridge
+        'path16646' => 28,  // Marco City
+        'path16642' => 29,  // East Grand Bahama
+
+        // Family Islands Constituencies (30-39)
+        'path16574' => 30,  // North Abaco
+        'path16576' => 31,  // Central & South Abaco
+        'path16578' => 32,  // North Eleuthera
+        'path16580' => 33,  // Eleuthera (Central & South Eleuthera)
+        'path16582' => 34,  // Cat Island, Rum Cay & San Salvador
+        'path16586' => 35,  // Exumas & Ragged Island
+        'path16588' => 36,  // Long Island
+        'path16584' => 37,  // MICAL
+        'path16638' => 38,  // Central & South Andros (North Andros & The Berry Islands)
+        'path16640' => 39,  // Mangrove Cay & South Andros
+    );
+}
+	
+	private function map_path_to_constituency($path_id, $path_index, $path_element) {
+    // Use the manual mapping you provided
+    $manual_mapping = $this->get_manual_svg_mapping();
+    
+    if (isset($manual_mapping[$path_id])) {
+        return $manual_mapping[$path_id];
+    }
+    
+    // Log unmapped paths for debugging
+    error_log("Unmapped SVG path found: " . $path_id);
+    
+    return 'unknown';
+}
 }
 
 // Initialize the enhanced plugin
