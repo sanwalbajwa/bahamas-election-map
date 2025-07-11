@@ -77,11 +77,15 @@ class BahamasElectionMapEnhanced {
     add_shortcode('bahamas_election_map', array($this, 'render_map_shortcode'));
     register_activation_hook(__FILE__, array($this, 'activate'));
     
-    // AJAX handlers - make sure these are properly registered
+    // Existing AJAX handlers
     add_action('wp_ajax_update_constituency', array($this, 'ajax_update_constituency'));
     add_action('wp_ajax_nopriv_update_constituency', array($this, 'ajax_update_constituency'));
     add_action('wp_ajax_get_svg_map', array($this, 'ajax_get_svg_map'));
     add_action('wp_ajax_nopriv_get_svg_map', array($this, 'ajax_get_svg_map'));
+    
+    // NEW AJAX handlers for features
+    add_action('wp_ajax_download_svg', array($this, 'ajax_download_svg'));
+    add_action('wp_ajax_nopriv_download_svg', array($this, 'ajax_download_svg'));
     
     add_shortcode('debug_bahamas', array($this, 'debug_shortcode'));
 }
@@ -210,81 +214,99 @@ class BahamasElectionMapEnhanced {
     }
     
     public function render_map_shortcode($atts) {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'bahamas_constituencies';
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'bahamas_constituencies';
+    
+    // Parse shortcode attributes
+    $atts = shortcode_atts(array(
+        'height' => '800px'
+    ), $atts);
+    
+    // Get current constituency data
+    $constituencies = $wpdb->get_results("SELECT * FROM $table_name ORDER BY constituency_number");
+    
+    ob_start();
+    ?>
+    <div id="bahamas-election-container">
         
-        // Parse shortcode attributes
-        $atts = shortcode_atts(array(
-            'height' => '800px'
-        ), $atts);
-        
-        // Get current constituency data
-        $constituencies = $wpdb->get_results("SELECT * FROM $table_name ORDER BY constituency_number");
-        
-        ob_start();
-        ?>
-        <div id="bahamas-election-container">
-            
-            <!-- Enhanced Seat Counter -->
-            <div class="seat-counter">
-                <h3>Parliamentary Seats (39 Total - 20 for Majority)</h3>
-                <div class="regional-breakdown">
-                    <div class="region-info">
-                        <strong>Nassau:</strong> <span id="nassau-total">24</span> seats
-                    </div>
-                    <div class="region-info">
-                        <strong>Grand Bahama:</strong> <span id="gb-total">5</span> seats
-                    </div>
-                    <div class="region-info">
-                        <strong>Family Islands:</strong> <span id="fi-total">10</span> seats
-                    </div>
+        <!-- Enhanced Seat Counter -->
+        <div class="seat-counter">
+            <h3>Parliamentary Seats (39 Total - 20 for Majority)</h3>
+            <div class="regional-breakdown">
+                <div class="region-info">
+                    <strong>Nassau:</strong> <span id="nassau-total">24</span> seats
                 </div>
-                <div class="party-totals">
-                    <div class="party-count plp-count">
-                        <span class="party-name">PLP</span>
-                        <span class="seat-count" id="plp-seats">0</span>
-                    </div>
-                    <div class="party-count fnm-count">
-                        <span class="party-name">FNM</span>
-                        <span class="seat-count" id="fnm-seats">0</span>
-                    </div>
-                    <div class="party-count coi-count">
-                        <span class="party-name">COI</span>
-                        <span class="seat-count" id="coi-seats">0</span>
-                    </div>
-                    <div class="party-count dna-count">
-                        <span class="party-name">DNA</span>
-                        <span class="seat-count" id="dna-seats">0</span>
-                    </div>
-                    <div class="party-count ind-count">
-                        <span class="party-name">IND</span>
-                        <span class="seat-count" id="ind-seats">0</span>
-                    </div>
+                <div class="region-info">
+                    <strong>Grand Bahama:</strong> <span id="gb-total">5</span> seats
                 </div>
-                <div class="majority-indicator" id="majority-indicator">
-                    <span id="majority-text">No Majority</span>
+                <div class="region-info">
+                    <strong>Family Islands:</strong> <span id="fi-total">10</span> seats
                 </div>
             </div>
-            
-            <!-- Map Controls -->
-            <div class="map-controls">
-                <button id="share-simulation" class="btn btn-share">Share Simulation</button>
-                <button id="download-svg" class="btn btn-download">Download Map</button>
-                <label>
-                    <input type="checkbox" id="colorblind-mode"> Colorblind Mode
-                </label>
-            </div>
-            
-            <!-- Enhanced Map Container -->
-            <div class="map-container">
-                <div id="bahamas-map" style="height: <?php echo esc_attr($atts['height']); ?>;">
-                    <!-- Enhanced map will be loaded here -->
-                    <div class="map-loading">
-                        <span>Loading enhanced interactive map...</span>
-                    </div>
+            <div class="party-totals">
+                <div class="party-count plp-count">
+                    <span class="party-name">PLP</span>
+                    <span class="seat-count" id="plp-seats">0</span>
                 </div>
+                <div class="party-count fnm-count">
+                    <span class="party-name">FNM</span>
+                    <span class="seat-count" id="fnm-seats">0</span>
+                </div>
+                <div class="party-count coi-count">
+                    <span class="party-name">COI</span>
+                    <span class="seat-count" id="coi-seats">0</span>
+                </div>
+                <div class="party-count dna-count">
+                    <span class="party-name">DNA</span>
+                    <span class="seat-count" id="dna-seats">0</span>
+                </div>
+                <div class="party-count ind-count">
+                    <span class="party-name">IND</span>
+                    <span class="seat-count" id="ind-seats">0</span>
+                </div>
+            </div>
+            <div class="majority-indicator" id="majority-indicator">
+                <span id="majority-text">No Majority</span>
+            </div>
+        </div>
+        
+        <!-- Enhanced Map Controls -->
+        <div class="map-controls">
+            <button id="reset-to-2021" class="btn btn-reset" title="Reset to 2021 Election Results">
+                <span class="btn-icon">🔄</span> Reset to 2021
+            </button>
+            <button id="share-simulation" class="btn btn-share" title="Share your simulation">
+                <span class="btn-icon">🔗</span> Share Simulation
+            </button>
+            <button id="download-svg" class="btn btn-download" title="Download the current map as SVG">
+                <span class="btn-icon">⬇️</span> Download Map
+            </button>
+            <label class="control-label" title="Enable colorblind-friendly colors">
+                <input type="checkbox" id="colorblind-mode"> 
+                <span class="checkbox-icon">🎨</span> Colorblind Mode
+            </label>
+            <div class="simulation-status" id="simulation-status">
+                <span class="status-icon">✅</span>
+                <span class="status-text">2021 Election Results</span>
+            </div>
+        </div>
+        
+        <!-- FULL WIDTH MAP CONTAINER -->
+        <div class="map-container-fullwidth">
+            <div id="bahamas-map" style="height: <?php echo esc_attr($atts['height']); ?>;">
+                <div class="map-loading">
+                    <span>Loading enhanced interactive map...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MOVED: Constituency Info and Controls Below Map -->
+        <div class="bottom-controls-section">
+            
+            <!-- Two Column Layout: Info Panel + Quick Actions -->
+            <div class="bottom-controls-grid">
                 
-                <!-- Enhanced Constituency Info Panel -->
+                <!-- Constituency Info Panel -->
                 <div class="constituency-info" id="constituency-info">
                     <h4 id="info-title">Select a Constituency</h4>
                     <div class="info-details">
@@ -305,45 +327,342 @@ class BahamasElectionMapEnhanced {
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Enhanced Legend -->
-            <div class="map-legend">
-                <h4>Party Colors & Information</h4>
-                <div class="legend-item">
-                    <span class="color-box plp-color"></span>
-                    <span>Progressive Liberal Party (PLP) - Current Government</span>
+                
+                <!-- Quick Actions Panel -->
+                <div class="quick-actions-panel" id="quick-actions">
+                    <h4>Quick Actions</h4>
+                    <div class="quick-actions-grid">
+                        <button class="quick-btn quick-btn-large" id="flip-all-plp" data-party="PLP">
+                            <span class="quick-icon">🟡</span>
+                            <span class="quick-text">All PLP Sweep</span>
+                        </button>
+                        <button class="quick-btn quick-btn-large" id="flip-all-fnm" data-party="FNM">
+                            <span class="quick-icon">🔴</span>
+                            <span class="quick-text">All FNM Sweep</span>
+                        </button>
+                        <button class="quick-btn quick-btn-large" id="flip-nassau" data-region="Nassau">
+                            <span class="quick-icon">🏝️</span>
+                            <span class="quick-text">Flip Nassau</span>
+                        </button>
+                        <button class="quick-btn quick-btn-large" id="flip-grand-bahama" data-region="GrandBahama">
+                            <span class="quick-icon">🌊</span>
+                            <span class="quick-text">Flip Grand Bahama</span>
+                        </button>
+                        <button class="quick-btn quick-btn-large" id="flip-family-islands" data-region="FamilyIslands">
+                            <span class="quick-icon">🏖️</span>
+                            <span class="quick-text">Flip Family Islands</span>
+                        </button>
+                        <button class="quick-btn quick-btn-large" id="random-simulation">
+                            <span class="quick-icon">🎲</span>
+                            <span class="quick-text">Random Simulation</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <span class="color-box fnm-color"></span>
-                    <span>Free National Movement (FNM) - Opposition</span>
-                </div>
-                <div class="legend-item">
-                    <span class="color-box coi-color"></span>
-                    <span>Coalition of Independence (COI)</span>
-                </div>
-                <div class="legend-item">
-                    <span class="color-box dna-color"></span>
-                    <span>Democratic National Alliance (DNA)</span>
-                </div>
-                <div class="legend-item">
-                    <span class="color-box ind-color"></span>
-                    <span>Independent (IND)</span>
-                </div>
-                <div class="legend-note">
-                    <small><strong>Nassau Focus:</strong> The largest section shows Nassau/New Providence with all 24 constituencies clearly visible for detailed interaction.</small>
-                </div>
+                
             </div>
         </div>
         
-        <!-- Hidden data for JavaScript -->
-        <script type="application/json" id="constituency-data">
-        <?php echo json_encode($constituencies); ?>
-        </script>
-        <?php
-        return ob_get_clean();
+        <!-- Enhanced Legend -->
+        <div class="map-legend" id="map-legend">
+            <h4>Party Colors & Information</h4>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <span class="color-box plp-color" id="plp-color-box"></span>
+                    <span>Progressive Liberal Party (PLP) - Current Government</span>
+                </div>
+                <div class="legend-item">
+                    <span class="color-box fnm-color" id="fnm-color-box"></span>
+                    <span>Free National Movement (FNM) - Opposition</span>
+                </div>
+                <div class="legend-item">
+                    <span class="color-box coi-color" id="coi-color-box"></span>
+                    <span>Coalition of Independence (COI)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="color-box dna-color" id="dna-color-box"></span>
+                    <span>Democratic National Alliance (DNA)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="color-box ind-color" id="ind-color-box"></span>
+                    <span>Independent (IND)</span>
+                </div>
+            </div>
+            <div class="legend-note">
+                <small><strong>Interactive Map:</strong> Click any constituency to select it, then use the buttons below to change parties. The map shows all 39 constituencies across Nassau, Grand Bahama, and the Family Islands.</small>
+            </div>
+            <div class="legend-note colorblind-note" style="display:none;">
+                <small><strong>Colorblind Mode:</strong> Enhanced contrast and pattern-based colors for better accessibility.</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden data for JavaScript -->
+    <script type="application/json" id="constituency-data">
+    <?php echo json_encode($constituencies); ?>
+    </script>
+    <?php
+    return ob_get_clean();
+}
+    /**
+ * Add AJAX handler for SVG download
+ */
+public function ajax_download_svg() {
+    check_ajax_referer('bahamas_election_nonce', 'nonce');
+    
+    $simulation_data = isset($_POST['simulation_data']) ? json_decode(stripslashes($_POST['simulation_data']), true) : array();
+    
+    // Generate SVG with current simulation data
+    $svg_content = $this->generate_download_svg($simulation_data);
+    
+    if ($svg_content) {
+        // Create filename with timestamp
+        $filename = 'bahamas-election-map-' . date('Y-m-d-H-i-s') . '.svg';
+        
+        wp_send_json_success(array(
+            'svg_content' => $svg_content,
+            'filename' => $filename,
+            'message' => 'SVG generated successfully'
+        ));
+    } else {
+        wp_send_json_error('Failed to generate SVG');
+    }
+}
+
+/**
+ * Generate SVG for download with current simulation state
+ */
+private function generate_download_svg($simulation_data) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'bahamas_constituencies';
+    $constituencies = $wpdb->get_results("SELECT * FROM $table_name ORDER BY constituency_number");
+    
+    // Count seats for each party
+    $seat_counts = array('PLP' => 0, 'FNM' => 0, 'COI' => 0, 'DNA' => 0, 'IND' => 0);
+    foreach ($simulation_data as $const_id => $party) {
+        if (isset($seat_counts[$party])) {
+            $seat_counts[$party]++;
+        }
     }
     
+    // Create enhanced SVG with proper map layout
+    $svg = '<svg viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">';
+    $svg .= '<defs>';
+    $svg .= '<style>';
+    $svg .= '.constituency-path { stroke: #333; stroke-width: 1.5; }';
+    $svg .= '.constituency-label { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; text-anchor: middle; fill: #fff; }';
+    $svg .= '.region-title { font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; text-anchor: middle; fill: #2c3e50; }';
+    $svg .= '.region-subtitle { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; fill: #7f8c8d; }';
+    $svg .= '.seat-counter-text { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; text-anchor: start; fill: #2c3e50; }';
+    $svg .= '</style>';
+    $svg .= '</defs>';
+    
+    // Background
+    $svg .= '<rect width="1400" height="1000" fill="#f8f9fa"/>';
+    
+    // Title with timestamp
+    $svg .= '<text x="700" y="30" class="region-title" font-size="24">The Bahamas - Election Simulation</text>';
+    $svg .= '<text x="700" y="55" class="region-title" font-size="14" fill="#666">Generated: ' . date('F j, Y g:i A') . '</text>';
+    
+    // Seat counter at top
+    $svg .= '<text x="50" y="100" class="seat-counter-text">PARLIAMENTARY SEATS:</text>';
+    $x_pos = 250;
+    foreach ($seat_counts as $party => $count) {
+        $color = $this->get_party_color($party);
+        $svg .= sprintf('<rect x="%d" y="85" width="80" height="20" fill="%s" stroke="#333"/>', $x_pos, $color);
+        $svg .= sprintf('<text x="%d" y="98" class="constituency-label" fill="#fff">%s: %d</text>', $x_pos + 40, $party, $count);
+        $x_pos += 90;
+    }
+    
+    // Majority indicator
+    $majority_party = null;
+    foreach ($seat_counts as $party => $count) {
+        if ($count >= 20) {
+            $majority_party = $party;
+            break;
+        }
+    }
+    
+    if ($majority_party) {
+        $svg .= sprintf('<text x="900" y="98" class="seat-counter-text" fill="#008000">%s MAJORITY (%d seats)</text>', $majority_party, $seat_counts[$majority_party]);
+    } else {
+        $leading_party = array_keys($seat_counts, max($seat_counts))[0];
+        $svg .= sprintf('<text x="900" y="98" class="seat-counter-text" fill="#ff6600">HUNG PARLIAMENT (%s leads with %d)</text>', $leading_party, $seat_counts[$leading_party]);
+    }
+    
+    // Generate the actual map sections (using the same layout as the interactive map)
+    $svg .= $this->generate_download_nassau_section($simulation_data);
+    $svg .= $this->generate_download_grand_bahama_section($simulation_data);
+    $svg .= $this->generate_download_family_islands_section($simulation_data);
+    
+    // Legend
+    $svg .= $this->generate_legend_for_download();
+    
+    $svg .= '</svg>';
+    return $svg;
+}
+
+
+/**
+ * Generate Nassau section for download
+ */
+private function generate_download_nassau_section($simulation_data) {
+    $svg = '';
+    
+    // Nassau title and subtitle (matching interactive map)
+    $svg .= '<text x="350" y="140" class="region-title">NASSAU / NEW PROVIDENCE</text>';
+    $svg .= '<text x="350" y="160" class="region-subtitle">24 Constituencies (Most Important Region)</text>';
+    
+    // Nassau grid - 6 columns x 4 rows for 24 constituencies (same as interactive)
+    $cols = 6;
+    $width = 85;
+    $height = 60;
+    $spacing = 8;
+    $start_x = 50;
+    $start_y = 180;
+    
+    $nassau_count = 0;
+    foreach ($this->nassau_constituencies as $const_num => $const_name) {
+        $party = isset($simulation_data[$const_num]) ? $simulation_data[$const_num] : 'PLP';
+        $row = floor($nassau_count / $cols);
+        $col = $nassau_count % $cols;
+        $x = $start_x + $col * ($width + $spacing);
+        $y = $start_y + $row * ($height + $spacing);
+        
+        $svg .= sprintf(
+            '<rect class="constituency-path" x="%d" y="%d" width="%d" height="%d" fill="%s" rx="5"/>',
+            $x, $y, $width, $height, $this->get_party_color($party)
+        );
+        
+        // Constituency number (larger for Nassau)
+        $svg .= sprintf(
+            '<text x="%d" y="%d" class="constituency-label" font-weight="bold" font-size="14">%d</text>',
+            $x + $width/2, $y + $height/2 - 5, $const_num
+        );
+        
+        // Constituency name (smaller text below number)
+        $display_name = strlen($const_name) > 12 ? substr($const_name, 0, 12) . '...' : $const_name;
+        $svg .= sprintf(
+            '<text x="%d" y="%d" class="constituency-label" font-size="8">%s</text>',
+            $x + $width/2, $y + $height/2 + 8, esc_attr($display_name)
+        );
+        
+        $nassau_count++;
+    }
+    
+    return $svg;
+}
+
+/**
+ * Generate Grand Bahama section for download - FIXED layout
+ */
+private function generate_download_grand_bahama_section($simulation_data) {
+    $svg = '';
+    
+    // Grand Bahama title (positioned to the right like interactive map)
+    $svg .= '<text x="1050" y="200" class="region-title">GRAND BAHAMA</text>';
+    $svg .= '<text x="1050" y="220" class="region-subtitle">5 Constituencies</text>';
+    
+    $width = 120;
+    $height = 50;
+    $start_x = 800;
+    $start_y = 240;
+    $spacing = 10;
+    
+    $gb_count = 0;
+    foreach ($this->grand_bahama_constituencies as $const_num => $const_name) {
+        $party = isset($simulation_data[$const_num]) ? $simulation_data[$const_num] : 'PLP';
+        $x = $start_x + $gb_count * ($width + $spacing);
+        $y = $start_y;
+        
+        // Wrap to second row if needed (same as interactive)
+        if ($gb_count >= 3) {
+            $x = $start_x + ($gb_count - 3) * ($width + $spacing);
+            $y = $start_y + $height + $spacing;
+        }
+        
+        $svg .= sprintf(
+            '<rect class="constituency-path" x="%d" y="%d" width="%d" height="%d" fill="%s" rx="4"/>',
+            $x, $y, $width, $height, $this->get_party_color($party)
+        );
+        
+        $svg .= sprintf(
+            '<text x="%d" y="%d" class="constituency-label" font-weight="bold">%d</text>',
+            $x + $width/2, $y + $height/2, $const_num
+        );
+        
+        $gb_count++;
+    }
+    
+    return $svg;
+}
+
+/**
+ * Generate Family Islands section for download - FIXED layout
+ */
+private function generate_download_family_islands_section($simulation_data) {
+    $svg = '';
+    
+    // Family Islands title (positioned to the right like interactive map)
+    $svg .= '<text x="1050" y="420" class="region-title">FAMILY ISLANDS</text>';
+    $svg .= '<text x="1050" y="440" class="region-subtitle">10 Constituencies</text>';
+    
+    $cols = 3;
+    $width = 100;
+    $height = 45;
+    $start_x = 800;
+    $start_y = 460;
+    $spacing = 10;
+    
+    $fi_count = 0;
+    foreach ($this->family_islands_constituencies as $const_num => $const_name) {
+        $party = isset($simulation_data[$const_num]) ? $simulation_data[$const_num] : 'PLP';
+        $row = floor($fi_count / $cols);
+        $col = $fi_count % $cols;
+        $x = $start_x + $col * ($width + $spacing);
+        $y = $start_y + $row * ($height + $spacing);
+        
+        $svg .= sprintf(
+            '<rect class="constituency-path" x="%d" y="%d" width="%d" height="%d" fill="%s" rx="4"/>',
+            $x, $y, $width, $height, $this->get_party_color($party)
+        );
+        
+        $svg .= sprintf(
+            '<text x="%d" y="%d" class="constituency-label" font-size="10">%d</text>',
+            $x + $width/2, $y + $height/2, $const_num
+        );
+        
+        $fi_count++;
+    }
+    
+    return $svg;
+}
+/**
+ * Generate legend for download
+ */
+private function generate_legend_for_download() {
+    $svg = '<text x="50" y="780" class="region-title">PARTY LEGEND</text>';
+    
+    $parties = array(
+        'PLP' => 'Progressive Liberal Party (Gold)',
+        'FNM' => 'Free National Movement (Red)', 
+        'COI' => 'Coalition of Independence (Cyan)',
+        'DNA' => 'Democratic National Alliance (Green)',
+        'IND' => 'Independent (Gray)'
+    );
+    
+    $y_pos = 810;
+    foreach ($parties as $party => $name) {
+        $color = $this->get_party_color($party);
+        $svg .= sprintf('<rect x="50" y="%d" width="25" height="20" fill="%s" stroke="#333" stroke-width="1.5"/>', $y_pos - 15, $color);
+        $svg .= sprintf('<text x="85" y="%d" class="constituency-label" fill="#333" text-anchor="start" font-size="12">%s</text>', $y_pos, $name);
+        $y_pos += 30;
+    }
+    
+    // Add download info
+    $svg .= sprintf('<text x="50" y="%d" class="seat-counter-text" font-size="10" fill="#666">Downloaded from: %s</text>', $y_pos + 20, get_site_url());
+    
+    return $svg;
+}
 	public function enhance_official_svg($svg_content) {
     // Check if SVG content is valid
     if (!$svg_content || strlen($svg_content) < 100) {
@@ -683,7 +1002,18 @@ class BahamasElectionMapEnhanced {
         return $svg;
     }
     
-    private function get_party_color($party) {
+    private function get_party_color($party, $colorblind_mode = false) {
+    if ($colorblind_mode) {
+        // Colorblind-friendly colors with better contrast
+        $colors = array(
+            'PLP' => '#FFA500', // Orange instead of gold
+            'FNM' => '#CC0000', // Darker red
+            'COI' => '#0066CC', // Darker blue instead of cyan
+            'DNA' => '#228B22', // Forest green
+            'IND' => '#666666'  // Darker gray
+        );
+    } else {
+        // Default colors
         $colors = array(
             'PLP' => '#FFD700', // Gold
             'FNM' => '#FF0000', // Red
@@ -691,8 +1021,9 @@ class BahamasElectionMapEnhanced {
             'DNA' => '#00FF00', // Green
             'IND' => '#808080'  // Gray
         );
-        return isset($colors[$party]) ? $colors[$party] : '#CCCCCC';
     }
+    return isset($colors[$party]) ? $colors[$party] : '#CCCCCC';
+}
     
     public function ajax_get_svg_map() {
     // Verify nonce
