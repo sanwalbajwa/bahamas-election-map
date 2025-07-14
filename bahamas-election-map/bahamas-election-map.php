@@ -213,15 +213,13 @@ class BahamasElectionMapEnhanced {
         ));
     }
     
-    public function render_map_shortcode($atts) {
+public function render_map_shortcode($atts) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'bahamas_constituencies';
-    
     // Parse shortcode attributes
     $atts = shortcode_atts(array(
         'height' => '800px'
     ), $atts);
-    
     // Get current constituency data
     $constituencies = $wpdb->get_results("SELECT * FROM $table_name ORDER BY constituency_number");
     
@@ -229,7 +227,6 @@ class BahamasElectionMapEnhanced {
     ?>
     <div id="bahamas-election-container">
         
-        <!-- Enhanced Seat Counter -->
         <div class="seat-counter">
             <h3>Parliamentary Seats (39 Total - 20 for Majority)</h3>
             <div class="regional-breakdown">
@@ -270,12 +267,11 @@ class BahamasElectionMapEnhanced {
             </div>
         </div>
         
-        <!-- Enhanced Map Controls -->
         <div class="map-controls">
             <button id="reset-to-2021" class="btn btn-reset" title="Reset to 2021 Election Results">
                 <span class="btn-icon">🔄</span> Reset to 2021
             </button>
-            <button id="share-simulation" class="btn btn-share" title="Share your simulation">
+             <button id="share-simulation" class="btn btn-share" title="Share your simulation">
                 <span class="btn-icon">🔗</span> Share Simulation
             </button>
             <button id="download-svg" class="btn btn-download" title="Download the current map as SVG">
@@ -290,116 +286,89 @@ class BahamasElectionMapEnhanced {
                 <span class="status-text">2021 Election Results</span>
             </div>
         </div>
-        
-        <!-- FULL WIDTH MAP CONTAINER -->
-        <div class="map-container-fullwidth">
+        <div class="map-container-with-overlay">
             <div id="bahamas-map" style="height: <?php echo esc_attr($atts['height']); ?>;">
                 <div class="map-loading">
                     <span>Loading enhanced interactive map...</span>
                 </div>
             </div>
+        <div class="mp-avatar">
+        	<span class="avatar-icon">👤</span>
+        	<span id="info-mp-name">Click on any constituency</span>
+            <span id="info-party-badge">-</span>
         </div>
-        
-        <!-- MOVED: Constituency Info and Controls Below Map -->
-        <div class="bottom-controls-section">
-            
-            <!-- Two Column Layout: Info Panel + Quick Actions -->
-            <div class="bottom-controls-grid">
-                
-                <!-- Constituency Info Panel -->
-                <div class="constituency-info" id="constituency-info">
-                    <h4 id="info-title">Select a Constituency</h4>
-                    <div class="info-details">
-                        <p id="info-number"><strong>Number:</strong> -</p>
-                        <p id="info-mp"><strong>MP:</strong> Click on any constituency</p>
-                        <p id="info-party"><strong>Current Party:</strong> -</p>
-                        <p id="info-region"><strong>Region:</strong> -</p>
-                        <p id="info-island"><strong>Island:</strong> -</p>
+            <div class="constituency-info-overlay" id="constituency-info">
+                <div class="info-details">
+                    <div class="info-row">
+                        <span class="info-label">Constituency:</span>
+                        <span id="info-constituency-name">-</span>
                     </div>
-                    <div class="party-selector" id="party-selector" style="display:none;">
-                        <p><strong>Click to change party:</strong></p>
-                        <div class="party-buttons">
-                            <button class="party-btn plp-btn" data-party="PLP">PLP</button>
-                            <button class="party-btn fnm-btn" data-party="FNM">FNM</button>
-                            <button class="party-btn coi-btn" data-party="COI">COI</button>
-                            <button class="party-btn dna-btn" data-party="DNA">DNA</button>
-                            <button class="party-btn ind-btn" data-party="IND">IND</button>
+                    <div class="info-row">
+                        <span class="info-label">Member Of Parliament:</span>
+                        <span id="info-mp-full">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Current Party:</span>
+                        <span id="info-current-party">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Region:</span>
+                        <span id="info-region">-</span>
+                    </div>
+                </div>
+                <div class="legend-compact">
+                    <div class="legend-title">Party Colors</div>
+                    <div class="legend-items-compact">
+                        <div class="legend-item-compact">
+                            <span class="color-dot plp-color"></span>
+                            <span>Progressive Liberal Party (PLP) - Current Government</span>
+                        </div>
+                        <div class="legend-item-compact">
+                            <span class="color-dot fnm-color"></span>
+                            <span>Free National Movement (FNM) - Opposition</span>
+                        </div>
+                        <div class="legend-item-compact">
+                            <span class="color-dot coi-color"></span>
+                            <span>Coalition of Independence (COI)</span>
+                        </div>
+                        <div class="legend-item-compact">
+                            <span class="color-dot dna-color"></span>
+                            <span>Democratic National Alliance (DNA)</span>
+                        </div>
+                        <div class="legend-item-compact">
+                            <span class="color-dot ind-color"></span>
+                            <span>Independent (IND)</span>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Quick Actions Panel -->
-                <div class="quick-actions-panel" id="quick-actions">
-                    <h4>Quick Actions</h4>
-                    <div class="quick-actions-grid">
-                        <button class="quick-btn quick-btn-large" id="flip-all-plp" data-party="PLP">
-                            <span class="quick-icon">🟡</span>
-                            <span class="quick-text">All PLP Sweep</span>
-                        </button>
-                        <button class="quick-btn quick-btn-large" id="flip-all-fnm" data-party="FNM">
-                            <span class="quick-icon">🔴</span>
-                            <span class="quick-text">All FNM Sweep</span>
-                        </button>
-                        <button class="quick-btn quick-btn-large" id="flip-nassau" data-region="Nassau">
-                            <span class="quick-icon">🏝️</span>
-                            <span class="quick-text">Flip Nassau</span>
-                        </button>
-                        <button class="quick-btn quick-btn-large" id="flip-grand-bahama" data-region="GrandBahama">
-                            <span class="quick-icon">🌊</span>
-                            <span class="quick-text">Flip Grand Bahama</span>
-                        </button>
-                        <button class="quick-btn quick-btn-large" id="flip-family-islands" data-region="FamilyIslands">
-                            <span class="quick-icon">🏖️</span>
-                            <span class="quick-text">Flip Family Islands</span>
-                        </button>
-                        <button class="quick-btn quick-btn-large" id="random-simulation">
-                            <span class="quick-icon">🎲</span>
-                            <span class="quick-text">Random Simulation</span>
-                        </button>
-                    </div>
-                </div>
-                
             </div>
         </div>
         
-        <!-- Enhanced Legend -->
-        <div class="map-legend" id="map-legend">
-            <h4>Party Colors & Information</h4>
-            <div class="legend-grid">
-                <div class="legend-item">
-                    <span class="color-box plp-color" id="plp-color-box"></span>
-                    <span>Progressive Liberal Party (PLP) - Current Government</span>
-                </div>
-                <div class="legend-item">
-                    <span class="color-box fnm-color" id="fnm-color-box"></span>
-                    <span>Free National Movement (FNM) - Opposition</span>
-                </div>
-                <div class="legend-item">
-                    <span class="color-box coi-color" id="coi-color-box"></span>
-                    <span>Coalition of Independence (COI)</span>
-                </div>
-                <div class="legend-item">
-                    <span class="color-box dna-color" id="dna-color-box"></span>
-                    <span>Democratic National Alliance (DNA)</span>
-                </div>
-                <div class="legend-item">
-                    <span class="color-box ind-color" id="ind-color-box"></span>
-                    <span>Independent (IND)</span>
-                </div>
-            </div>
-            <div class="legend-note">
-                <small><strong>Interactive Map:</strong> Click any constituency to select it, then use the buttons below to change parties. The map shows all 39 constituencies across Nassau, Grand Bahama, and the Family Islands.</small>
-            </div>
-            <div class="legend-note colorblind-note" style="display:none;">
-                <small><strong>Colorblind Mode:</strong> Enhanced contrast and pattern-based colors for better accessibility.</small>
-            </div>
-        </div>
     </div>
     
-    <!-- Hidden data for JavaScript -->
     <script type="application/json" id="constituency-data">
     <?php echo json_encode($constituencies); ?>
     </script>
+    <div class="social-share-container">
+        <span class="social-share-label">Share:</span>
+        <div class="social-share-buttons">
+            <a href="#" id="share-whatsapp" class="social-share-btn whatsapp-btn" title="Share on WhatsApp">
+                <i class="fab fa-whatsapp"></i>
+            </a>
+            <a href="#" id="share-facebook" class="social-share-btn facebook-btn" title="Share on Facebook">
+                <i class="fab fa-facebook-f"></i>
+            </a>
+            <a href="#" id="share-twitter" class="social-share-btn twitter-btn" title="Share on X/Twitter">
+                <i class="fab fa-twitter"></i>
+            </a>
+			<a href="#" id="share-tiktok" class="social-share-btn tiktok-btn" title="Share on TikTok">
+                <i class="fa fa-music"></i>
+            </a>
+			<a href="#" id="share-instagram" class="social-share-btn instagram-btn" title="Share on Instagram">
+                <i class="fa fa-instagram"></i>
+            </a>
+        </div>
+    </div>
     <?php
     return ob_get_clean();
 }
