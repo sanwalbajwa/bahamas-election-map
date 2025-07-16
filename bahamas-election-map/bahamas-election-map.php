@@ -843,7 +843,7 @@ class BahamasElectionMapEnhanced {
                     <span class="checkbox-icon">🎨</span> Colorblind Mode
                 </label>
                 <?php if ($atts['show_mp_photos'] === 'true'): ?>
-                <label class="control-label" title="Show MP photos">
+                <label class="control-label mp-photo" title="Show MP photos">
                     <input type="checkbox" id="show-mp-photos" checked> 
                     <span class="checkbox-icon">📷</span> Show MP Photos
                 </label>
@@ -854,12 +854,12 @@ class BahamasElectionMapEnhanced {
                 </div>
             </div>
             <div class="map-container-with-overlay">
-                <div id="bahamas-map" style="height: <?php echo esc_attr($atts['height']); ?>;">
+                <div id="bahamas-map" ?>;">
                     <div class="map-loading">
                         <span>Loading enhanced interactive map...</span>
                     </div>
                 </div>
-                
+               <div class="parent-info"> 
                 <!-- UPDATED MP Avatar with Photo -->
 				<div class="mp-avatar">
 					<?php if ($atts['show_mp_photos'] === 'true'): ?>
@@ -922,6 +922,7 @@ class BahamasElectionMapEnhanced {
                         </div>
                     </div>
                 </div>
+			</div>
             </div>
             
         </div>
