@@ -31,7 +31,7 @@ jQuery(document).ready(function($) {
         'IND': 'Independent'
     };
     
-    // DEFAULT 2021 RESULTS
+    // BACKUP 2021 RESULTS (only used for reset function)
     const DEFAULT_2021_RESULTS = {
         1: 'FNM',   // Killarney
         2: 'PLP',   // Golden Isles
@@ -58,7 +58,7 @@ jQuery(document).ready(function($) {
         23: 'PLP',  // Bains Town & Grants Town
         24: 'PLP',  // Fort Charlotte
         25: 'PLP',  // West Grand Bahama & Bimini
-        26: 'FNM',  // Grand Central Bahama
+        26: 'COI',  // Grand Central Bahama - FIXED: This was PLP in your admin but should be COI in 2021
         27: 'PLP',  // Pineridge
         28: 'FNM',  // Marco City
         29: 'FNM',  // East Grand Bahama
@@ -103,7 +103,7 @@ jQuery(document).ready(function($) {
     function init() {
         injectOverlayStyles(); // CRITICAL: Inject styles first
         loadConstituencyData();
-        resetTo2021Results();
+        loadCurrentDatabaseState();
         setupEventListeners();
         setupImageErrorHandling(); // Add image error handling
         loadEnhancedSVGMap();
@@ -114,6 +114,39 @@ jQuery(document).ready(function($) {
         console.log('🎉 Bahamas Election Map initialized with overlay layout!');
     }
     
+	function loadCurrentDatabaseState() {
+        console.log('📊 Loading current database state...');
+        
+        // Build current simulation from loaded constituency data
+        Object.keys(constituencyData).forEach(id => {
+            const constituency = constituencyData[id];
+            currentSimulation[id] = constituency.current_party || 'PLP';
+        });
+        
+        // Update all visuals with current database state
+        Object.keys(currentSimulation).forEach(id => {
+            updateConstituencyVisual(parseInt(id), currentSimulation[id]);
+        });
+        
+        updateSeatCounts();
+        clearConstituencyInfo();
+        
+        // Determine status based on whether current state matches 2021 results
+        const matches2021 = Object.keys(DEFAULT_2021_RESULTS).every(id => 
+            currentSimulation[id] === DEFAULT_2021_RESULTS[id]
+        );
+        
+        if (matches2021) {
+            updateSimulationStatus('2021 Election Results', false);
+            isSimulationModified = false;
+        } else {
+            updateSimulationStatus('Current Database State', false);
+            isSimulationModified = false; // Not modified by user, just different from 2021
+        }
+        
+        console.log('✅ Loaded current database state:', currentSimulation);
+    }
+	
     // Add this function to handle image loading errors
     function setupImageErrorHandling() {
         // Handle image loading errors
@@ -230,9 +263,6 @@ jQuery(document).ready(function($) {
                 }
 
                 .mp-avatar {
-                    position: absolute;
-                    top: 23px;
-                    right: 345px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -247,6 +277,9 @@ jQuery(document).ready(function($) {
                     -webkit-backdrop-filter: blur(10px);
                     min-width: 200px;
                     transition: all 0.3s ease;
+					position: absolute !important;
+                    top: 20px !important;
+                    right: 347px !important;
                 }
 
                 .mp-avatar:hover {
@@ -513,15 +546,20 @@ jQuery(document).ready(function($) {
                         position: relative !important;
                         top: auto !important;
                         right: auto !important;
-                        margin: 20px auto !important;
-                        width: 100% !important;
+                        margin-top: 20px !important;
                         max-width: 300px !important;
                     }
+					.parent-info{
+						display:flex;
+						flex-direction: row;
+						gap: 10px;
+						margin-bottom: 20px;
+					}
                 }
 
                 @media (max-width: 768px) {
                     #bahamas-map {
-                        min-height: 600px !important;
+                        min-height: 260px !important;
                         touch-action: none !important;
                     }
                     
@@ -534,11 +572,18 @@ jQuery(document).ready(function($) {
                         width: 60px;
                         height: 60px;
                     }
-                    
+                    .mp-avatar{
+						width: 100% !important;
+                        max-height: 300px !important;
+                        bottom: 20px !important;
+                        top: 0px !important;
+                        right: 0px !important;
+                        left: 0px !important;
+					}
+
                     .avatar-icon {
                         font-size: 36px;
                     }
-                    
                     #info-mp-name {
                         font-size: 14px;
                     }
@@ -546,20 +591,27 @@ jQuery(document).ready(function($) {
                     #mobile-zoom-controls {
                         display: flex !important;
                     }
-                    
+                    .map-container-with-overlay {
+                        display: flex !important;
+                        flex-direction: column-reverse !important;
+                    }
                     .constituency-info-overlay {
-                        width: calc(100% - 40px) !important;
+                        width: 100% !important;
                         max-height: 300px !important;
                         bottom: 20px !important;
-                        top: auto !important;
-                        right: 20px !important;
-                        left: 20px !important;
+                        top: 0px !important;
+                        right: 0px !important;
+                        left: 0px !important;
                     }
                     
                     /* Prevent zoom on double-tap for other elements */
                     .seat-counter, .map-controls, .social-share-container {
                         touch-action: manipulation !important;
                     }
+					 .parent-info{
+						display:flex;
+						flex-direction: column;
+					}
                 }
 
                 @media (min-width: 769px) {
@@ -579,6 +631,8 @@ jQuery(document).ready(function($) {
                 .colorblind-mode .fnm-color { background: linear-gradient(135deg, #CC0000, #990000) !important; }
                 .colorblind-mode .dna-color { background: linear-gradient(135deg, #228B22, #006400) !important; }
                 .colorblind-mode .ind-color { background: linear-gradient(135deg, #666666, #444444) !important; }
+
+
                 </style>
             `;
             
@@ -594,11 +648,18 @@ jQuery(document).ready(function($) {
             data.forEach(constituency => {
                 constituencyData[constituency.constituency_number] = constituency;
             });
-            console.log('✅ Loaded constituency data');
+            console.log('✅ Loaded constituency data:', constituencyData);
         }
     }
     
-    function resetTo2021Results() {
+     function resetTo2021Results() {
+        if (isSimulationModified) {
+            if (!confirm('This will reset all changes and return to 2021 election results. Are you sure?')) {
+                return;
+            }
+        }
+        
+        // Update simulation state
         currentSimulation = { ...DEFAULT_2021_RESULTS };
         isSimulationModified = false;
         
@@ -609,12 +670,56 @@ jQuery(document).ready(function($) {
         
         updateSeatCounts();
         clearConstituencyInfo();
-        updateSimulationStatus('2021 Election Results', false);
+        updateSimulationStatus('2021 Election Results (Temporary)', true); // Mark as modified since it's different from DB
         
-        console.log('✅ Reset to 2021 election results');
-        showNotification('Reset to 2021 Election Results', 'success');
+        console.log('✅ Reset to 2021 election results (temporary simulation)');
+        showNotification('Reset to 2021 Election Results (Simulation Only)', 'success');
     }
     
+	function saveSimulationToDatabase() {
+        if (!confirm('Save current simulation to database? This will overwrite the stored party data.')) {
+            return;
+        }
+
+        const savePromises = [];
+        
+        Object.keys(currentSimulation).forEach(constituencyId => {
+            const party = currentSimulation[constituencyId];
+            
+            const savePromise = $.ajax({
+                url: bahamas_ajax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'update_constituency',
+                    nonce: bahamas_ajax.nonce,
+                    constituency_id: constituencyId,
+                    new_party: party,
+                    save_to_db: true // Add this flag to your PHP handler
+                }
+            });
+            
+            savePromises.push(savePromise);
+        });
+
+        Promise.all(savePromises)
+            .then(() => {
+                showNotification('Simulation saved to database successfully!', 'success');
+                isSimulationModified = false;
+                updateSimulationStatus('Current Database State', false);
+                
+                // Update constituency data to match simulation
+                Object.keys(currentSimulation).forEach(id => {
+                    if (constituencyData[id]) {
+                        constituencyData[id].current_party = currentSimulation[id];
+                    }
+                });
+            })
+            .catch((error) => {
+                console.error('Failed to save simulation:', error);
+                showNotification('Failed to save simulation to database', 'error');
+            });
+    }
+	
     function updateSimulationStatus(text, isModified) {
         const statusElement = $('#simulation-status');
         const statusText = statusElement.find('.status-text');
@@ -622,15 +727,15 @@ jQuery(document).ready(function($) {
         
         statusText.text(text);
         
-        if (isModified) {
+        if (isModified || isDifferentFromDatabase()) {
             statusIcon.text('🔄');
             statusElement.addClass('simulation-modified');
+            isSimulationModified = true;
         } else {
             statusIcon.text('✅');
             statusElement.removeClass('simulation-modified');
+            isSimulationModified = false;
         }
-        
-        isSimulationModified = isModified;
     }
     
     function initializeColorblindMode() {
@@ -695,14 +800,15 @@ jQuery(document).ready(function($) {
     function setupEventListeners() {
         // Reset button
         $('#reset-to-2021').on('click', function() {
-            if (isSimulationModified) {
-                if (confirm('This will reset all changes and return to 2021 election results. Are you sure?')) {
-                    resetTo2021Results();
-                }
-            } else {
-                resetTo2021Results();
-            }
+            resetTo2021Results();
         });
+        
+        // ADD: Save simulation button (if you want this feature)
+        if ($('#save-simulation').length) {
+            $('#save-simulation').on('click', function() {
+                saveSimulationToDatabase();
+            });
+        }
         
         // Colorblind mode toggle
         $('#colorblind-mode').on('change', function() {
@@ -776,6 +882,7 @@ jQuery(document).ready(function($) {
         console.log(`🔧 Updating constituency ${constituencyId} to ${newParty}`);
         
         // Update simulation data
+        const oldParty = currentSimulation[constituencyId];
         currentSimulation[constituencyId] = newParty;
         
         // Update visual representation
@@ -788,7 +895,7 @@ jQuery(document).ready(function($) {
         // Update info panel
         showConstituencyInfo(constituencyId, true);
         
-        // Mark as modified
+        // Mark as modified (simulation differs from database)
         updateSimulationStatus('Custom Simulation', true);
         
         // Visual feedback
@@ -796,7 +903,16 @@ jQuery(document).ready(function($) {
         elements.addClass('updated');
         setTimeout(() => elements.removeClass('updated'), 500);
         
-        console.log(`✅ Updated constituency ${constituencyId} to ${newParty}`);
+        console.log(`✅ Updated constituency ${constituencyId}: ${oldParty} → ${newParty}`);
+    }
+
+    // ADD: Function to check if current state differs from database
+    function isDifferentFromDatabase() {
+        return Object.keys(constituencyData).some(id => {
+            const dbParty = constituencyData[id]?.current_party || 'PLP';
+            const simParty = currentSimulation[id];
+            return dbParty !== simParty;
+        });
     }
 
     function cycleParty(constituencyId) {
