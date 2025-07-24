@@ -891,6 +891,10 @@ class BahamasElectionMapEnhanced {
                             <span class="info-label">Current Party:</span>
                             <span id="info-current-party">-</span>
                         </div>
+						<div class="info-row flip-row">
+							<span class="flip-label">Flip (Prediction):</span>
+							<span id="info-flip-prediction">-</span>
+                    	</div>
                         <div class="info-row">
                             <span class="info-label">Region:</span>
                             <span id="info-region">-</span>
