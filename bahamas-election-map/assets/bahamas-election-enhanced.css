@@ -1026,15 +1026,17 @@ label.mp-photo{
     .region-info {
         font-size: 12px;
     }
-    
+	.party-count.majority-party{
+		transform: none;
+	}
     .party-totals {
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
     }
     
     .party-count {
         width: 100%;
-        max-width: 200px;
+        max-width: 100px;
         flex-direction: row;
         justify-content: space-between;
     }
