@@ -77,6 +77,7 @@ jQuery(document).ready(function($) {
     // Global variables
     let constituencyData = {};
     let currentSimulation = {};
+	let flipPredictions = {};
     let selectedConstituency = null;
     let isColorblindMode = false;
     let isSimulationModified = false;
@@ -104,6 +105,7 @@ jQuery(document).ready(function($) {
         injectOverlayStyles(); // CRITICAL: Inject styles first
         loadConstituencyData();
         loadCurrentDatabaseState();
+		initializeFlipPredictions();
         setupEventListeners();
         setupImageErrorHandling(); // Add image error handling
         loadEnhancedSVGMap();
@@ -113,7 +115,7 @@ jQuery(document).ready(function($) {
         }, 1000);
         console.log('🎉 Bahamas Election Map initialized with overlay layout!');
     }
-    
+	
 	function loadCurrentDatabaseState() {
         console.log('📊 Loading current database state...');
         
@@ -167,6 +169,8 @@ jQuery(document).ready(function($) {
         });
     }
     
+	
+	
     // CRITICAL: Inject overlay styles if not already present
     function injectOverlayStyles() {
         if ($('#bahamas-overlay-styles').length === 0) {
@@ -800,7 +804,7 @@ jQuery(document).ready(function($) {
     function setupEventListeners() {
         // Reset button
         $('#reset-to-2021').on('click', function() {
-            resetTo2021Results();
+            resetFlipPredictionsTo2021();
         });
         
         // ADD: Save simulation button (if you want this feature)
@@ -827,7 +831,7 @@ jQuery(document).ready(function($) {
         $(document).on('click', '.party-btn', function() {
             const newParty = $(this).data('party');
             if (selectedConstituency) {
-                updateConstituency(selectedConstituency, newParty);
+                updateFlipPrediction(selectedConstituency, newParty);
             }
         });
         
@@ -1062,7 +1066,7 @@ jQuery(document).ready(function($) {
             'PLP': 0, 'FNM': 0, 'COI': 0, 'DNA': 0, 'IND': 0
         };
         
-        Object.values(currentSimulation).forEach(party => {
+         Object.values(flipPredictions).forEach(party => {
             if (counts.hasOwnProperty(party)) {
                 counts[party]++;
             }
@@ -1091,7 +1095,7 @@ jQuery(document).ready(function($) {
             majorityElement.addClass('has-majority');
             const surplus = counts[majorityParty] - 20;
             majorityText.html(`
-                <strong>${PARTY_NAMES[majorityParty]} Forms Government</strong>
+                <strong>${PARTY_NAMES[majorityParty]} Predicted to Form Government</strong>
                 <br><small>${counts[majorityParty]} seats ${surplus > 0 ? `(+${surplus} majority)` : '(Exact majority)'}</small>
             `);
         } else {
@@ -1099,16 +1103,120 @@ jQuery(document).ready(function($) {
             const maxParty = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
             const needed = 20 - counts[maxParty];
             majorityText.html(`
-                <strong>Hung Parliament</strong>
+                <strong>Predicted Hung Parliament</strong>
                 <br><small>${PARTY_NAMES[maxParty]} leads with ${counts[maxParty]} seats (needs ${needed} more)</small>
             `);
         }
     }
     
+	function initializeFlipPredictions() {
+    console.log('📊 Initializing flip predictions...');
+    
+    // FIRST: Check if we have a shared simulation from URL
+    const hasSharedSimulation = loadSimulationFromUrl();
+    
+    if (!hasSharedSimulation) {
+        // No shared simulation, initialize from current database state
+        console.log('📊 No shared simulation, using current database state...');
+        
+        Object.keys(constituencyData).forEach(id => {
+            const constituency = constituencyData[id];
+            flipPredictions[id] = constituency.current_party || 'PLP';
+        });
+        
+        updateSimulationStatus('Current State (2024)', false);
+    } else {
+        // We have shared simulation, show notification
+        showNotification('Shared simulation loaded successfully!', 'success');
+    }
+    
+    // Update visuals based on flip predictions
+    setTimeout(() => {
+        Object.keys(flipPredictions).forEach(id => {
+            updateConstituencyVisual(parseInt(id), flipPredictions[id]);
+        });
+        updateSeatCounts();
+        clearConstituencyInfo();
+    }, 100);
+    
+    console.log('✅ Flip predictions initialized:', flipPredictions);
+}
+    
+    // FLIP FEATURE: Update constituency flip prediction
+    function updateFlipPrediction(constituencyId, newParty) {
+        console.log(`🔧 Updating flip prediction for constituency ${constituencyId} to ${newParty}`);
+        
+        const oldFlip = flipPredictions[constituencyId];
+        flipPredictions[constituencyId] = newParty;
+        
+        // Update visual representation (map colors reflect flip, not current party)
+        const visualUpdated = updateConstituencyVisual(constituencyId, newParty);
+        console.log(`🎨 Visual update result:`, visualUpdated);
+        
+        // Update seat counts based on flip predictions
+        updateSeatCounts();
+        
+        // Update info panel
+        showConstituencyInfo(constituencyId, true);
+        
+        // Mark as modified
+        updateSimulationStatus('2025 Election Simulation', true);
+        
+        // Visual feedback
+        const elements = $(`[data-constituency="${constituencyId}"]`);
+        elements.addClass('updated');
+        setTimeout(() => elements.removeClass('updated'), 500);
+        
+        console.log(`✅ Updated flip prediction ${constituencyId}: ${oldFlip} → ${newParty}`);
+    }
+    
+    // FLIP FEATURE: Cycle through parties for flip prediction
+    function cycleFlipPrediction(constituencyId) {
+        console.log('🔄 Cycling flip prediction for constituency:', constituencyId);
+        
+        const currentFlip = flipPredictions[constituencyId];
+        const currentIndex = PARTIES.indexOf(currentFlip);
+        const nextIndex = (currentIndex + 1) % PARTIES.length;
+        const newParty = PARTIES[nextIndex];
+        
+        console.log(`🎨 Changing flip ${constituencyId} from ${currentFlip} to ${newParty}`);
+        
+        updateFlipPrediction(constituencyId, newParty);
+        
+        const constituencyName = constituencyData[constituencyId]?.constituency_name || `Constituency ${constituencyId}`;
+        showNotification(`${constituencyName} → Flip: ${PARTY_NAMES[newParty]}`, 'info', 2000);
+    }
+    
+    // FLIP FEATURE: Reset flip predictions to 2021 results
+    function resetFlipPredictionsTo2021() {
+        if (isSimulationModified) {
+            if (!confirm('This will reset all flip predictions to 2021 election results. Are you sure?')) {
+                return;
+            }
+        }
+        
+        // Update flip predictions (not current party data)
+        flipPredictions = { ...DEFAULT_2021_RESULTS };
+        isSimulationModified = false;
+        
+        // Update all visuals based on flip predictions
+        Object.keys(flipPredictions).forEach(id => {
+            updateConstituencyVisual(parseInt(id), flipPredictions[id]);
+        });
+        
+        updateSeatCounts();
+        clearConstituencyInfo();
+        updateSimulationStatus('2021 Election Results (Simulation)', true);
+        
+        console.log('✅ Reset flip predictions to 2021 election results');
+        showNotification('Flip predictions reset to 2021 Election Results', 'success');
+    }
+	
     // FIXED: Show constituency info with proper image/avatar visibility control
     function showConstituencyInfo(constituencyId, isSelected = false) {
         const constituency = constituencyData[constituencyId];
         const currentParty = currentSimulation[constituencyId];
+		const flipPrediction = flipPredictions[constituencyId];
         
         if (constituency) {
             // Update info header
@@ -1155,6 +1263,7 @@ jQuery(document).ready(function($) {
             $('#info-constituency-name').text(constituency.constituency_name);
             $('#info-mp-full').text(constituency.current_mp || 'To Be Determined');
             $('#info-current-party').text(`${PARTY_NAMES[currentParty]} (${currentParty})`);
+			$('#info-flip-prediction').text(`${PARTY_NAMES[flipPrediction]} (${flipPrediction})`);
             $('#info-region').text(constituency.region || 'Unknown');
             
             if (isSelected) {
@@ -1173,6 +1282,7 @@ jQuery(document).ready(function($) {
         $('#info-constituency-name').text('-');
         $('#info-mp-full').text('-');
         $('#info-current-party').text('-');
+		$('#info-flip-prediction').text('-');
         $('#info-region').text('-');
         $('#party-selector').hide();
         $('.party-btn').removeClass('active');
@@ -1190,24 +1300,41 @@ jQuery(document).ready(function($) {
     }
     
     function shareSimulation() {
-        const stateString = btoa(JSON.stringify({
-            simulation: currentSimulation,
-            colorblind: isColorblindMode,
-            timestamp: Date.now()
-        }));
-        
+    console.log('🔗 Sharing current simulation...');
+    console.log('📊 Current flip predictions:', flipPredictions);
+    
+    const simulationData = {
+        flipPredictions: flipPredictions,
+        colorblind: isColorblindMode,
+        timestamp: Date.now(),
+        version: '2.0' // Add version for future compatibility
+    };
+    
+    console.log('📦 Packaging simulation data:', simulationData);
+    
+    try {
+        const stateString = btoa(JSON.stringify(simulationData));
         const shareUrl = `${window.location.origin}${window.location.pathname}?simulation=${stateString}`;
+        
+        console.log('🔗 Generated share URL (first 100 chars):', shareUrl.substring(0, 100) + '...');
         
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(shareUrl).then(() => {
                 showNotification('Simulation link copied to clipboard!', 'success');
+                console.log('✅ Share URL copied to clipboard');
             }).catch(() => {
+                console.warn('⚠️ Clipboard API failed, using fallback');
                 fallbackCopyToClipboard(shareUrl);
             });
         } else {
+            console.log('ℹ️ Using fallback copy method');
             fallbackCopyToClipboard(shareUrl);
         }
+    } catch (error) {
+        console.error('❌ Error creating share URL:', error);
+        showNotification('Failed to create share link', 'error');
     }
+}
     
     function fallbackCopyToClipboard(text) {
         const textArea = document.createElement('textarea');
@@ -1737,7 +1864,7 @@ jQuery(document).ready(function($) {
         if (constituencyId && constituencyId >= 1 && constituencyId <= 39) {
             if (selectedConstituency === constituencyId) {
                 console.log('🔄 Cycling party for constituency:', constituencyId);
-                cycleParty(constituencyId);
+                cycleFlipPrediction(constituencyId);
             } else {
                 console.log('✅ Selecting constituency:', constituencyId);
                 selectConstituency(constituencyId);
@@ -1789,7 +1916,7 @@ jQuery(document).ready(function($) {
                 colorblind: isColorblindMode,
                 timestamp: Date.now()
             }));
-            const simulationUrl = `${window.location.origin}${window.location.pathname}?simulation=${stateString}`;
+            const simulationUrl = generateSimulationUrl();
 
             let shareUrl;
 
@@ -1823,6 +1950,30 @@ jQuery(document).ready(function($) {
         console.log('✅ Social share listeners set up');
     }
     
+	function generateSimulationUrl() {
+    console.log('🔗 Generating simulation URL...');
+    console.log('📊 Current flip predictions:', flipPredictions);
+    
+    const simulationData = {
+        flipPredictions: flipPredictions,
+        colorblind: isColorblindMode,
+        timestamp: Date.now(),
+        version: '2.0'
+    };
+    
+    try {
+        const stateString = btoa(JSON.stringify(simulationData));
+        const simulationUrl = `${window.location.origin}${window.location.pathname}?simulation=${stateString}`;
+        
+        console.log('✅ Generated simulation URL');
+        return simulationUrl;
+    } catch (error) {
+        console.error('❌ Error generating simulation URL:', error);
+        // Fallback to current page URL if generation fails
+        return window.location.href;
+    }
+}
+	
     function generateEnhancedFallbackHTML() {
         let html = '<div class="enhanced-fallback-container">';
         
@@ -1929,44 +2080,55 @@ jQuery(document).ready(function($) {
     }
     
     // Load simulation from URL if present
-    function loadSimulationFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const simulationParam = urlParams.get('simulation');
-        
-        if (simulationParam) {
-            try {
-                const data = JSON.parse(atob(simulationParam));
+function loadSimulationFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const simulationParam = urlParams.get('simulation');
+    
+    console.log('🔗 Checking for shared simulation in URL...');
+    
+    if (simulationParam) {
+        try {
+            const data = JSON.parse(atob(simulationParam));
+            console.log('📥 Found shared simulation data:', data);
+            
+            if (data.flipPredictions || data.simulation) {
+                // Support both old format (simulation) and new format (flipPredictions)
+                const predictions = data.flipPredictions || data.simulation;
                 
-                if (data.simulation) {
-                    const validConstituencies = Object.keys(data.simulation).every(id => 
-                        id >= 1 && id <= 39 && PARTIES.includes(data.simulation[id])
-                    );
+                const validConstituencies = Object.keys(predictions).every(id => 
+                    id >= 1 && id <= 39 && PARTIES.includes(predictions[id])
+                );
+                
+                if (validConstituencies) {
+                    console.log('✅ Valid shared simulation found, loading...');
                     
-                    if (validConstituencies) {
-                        currentSimulation = data.simulation;
-                        
-                        if (data.colorblind !== undefined) {
-                            isColorblindMode = data.colorblind;
-                            $('#colorblind-mode').prop('checked', isColorblindMode);
-                            if (isColorblindMode) {
-                                enableColorblindMode();
-                            }
+                    // IMPORTANT: Set flip predictions BEFORE any initialization
+                    flipPredictions = { ...predictions };
+                    
+                    // Set colorblind mode if specified
+                    if (data.colorblind !== undefined) {
+                        isColorblindMode = data.colorblind;
+                        $('#colorblind-mode').prop('checked', isColorblindMode);
+                        if (isColorblindMode) {
+                            enableColorblindMode();
                         }
-                        
-                        Object.keys(data.simulation).forEach(id => {
-                            updateConstituencyVisual(parseInt(id), data.simulation[id]);
-                        });
-                        
-                        updateSeatCounts();
-                        updateLegendColors();
-                        updateSimulationStatus('Shared Simulation', true);
-                        showNotification('Simulation loaded from URL!', 'success');
                     }
+                    
+                    // Mark as shared simulation
+                    updateSimulationStatus('Shared Simulation', true);
+                    
+                    console.log('🎯 Shared simulation loaded:', flipPredictions);
+                    return true; // Indicate that shared simulation was loaded
+                } else {
+                    console.error('❌ Invalid constituency data in shared simulation');
                 }
-            } catch (e) {
-                console.error('❌ Invalid simulation URL parameter:', e);
-                showNotification('Invalid simulation URL parameter', 'error');
+            } else {
+                console.error('❌ No flip predictions found in shared simulation');
             }
+        } catch (e) {
+            console.error('❌ Error parsing shared simulation:', e);
+            showNotification('Invalid simulation URL parameter', 'error');
+        }
         }
     }
     
