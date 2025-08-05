@@ -4,7 +4,7 @@
  * Plugin URI: https://sanwalbajwa.live/
  * Description: Interactive election simulation tool for all 39 Bahamian constituencies with admin panel
  * Version: 2.1.0
- * Author: Sanwal Bajwa
+ * Author: Sanwal Bajwa 
  * License: GPL v2 or later
  */
 
