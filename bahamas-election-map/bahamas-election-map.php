@@ -4,7 +4,7 @@
  * Plugin URI: https://sanwalbajwa.live/
  * Description: Interactive election simulation tool for all 39 Bahamian constituencies with admin panel
  * Version: 2.1.0
- * Author: Sanwal Bajwa 
+ * Author: Sanwal Bajwa
  * License: GPL v2 or later
  */
 
@@ -85,16 +85,22 @@ class BahamasElectionMapEnhanced {
         add_action('wp_ajax_download_svg', array($this, 'ajax_download_svg'));
         add_action('wp_ajax_nopriv_download_svg', array($this, 'ajax_download_svg'));
         
- // Admin functionality
-    add_action('admin_menu', array($this, 'add_admin_menu'));
-    add_action('admin_init', array($this, 'admin_init'));
-    add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
-    add_action('wp_ajax_update_mp_info', array($this, 'ajax_update_mp_info'));
-    add_action('wp_ajax_upload_mp_image', array($this, 'ajax_upload_mp_image'));
-    add_action('wp_ajax_delete_mp_image', array($this, 'ajax_delete_mp_image')); // ADD THIS LINE
-    add_action('wp_ajax_export_mp_data', array($this, 'ajax_export_mp_data'));
-    add_action('wp_ajax_reset_all_mp_data', array($this, 'ajax_reset_all_mp_data'));
-	add_action('wp_ajax_test_connection', array($this, 'ajax_test_connection'));
+		 // Admin functionality
+		add_action('admin_menu', array($this, 'add_admin_menu'));
+		add_action('admin_init', array($this, 'admin_init'));
+		add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+		add_action('wp_ajax_update_mp_info', array($this, 'ajax_update_mp_info'));
+		add_action('wp_ajax_upload_mp_image', array($this, 'ajax_upload_mp_image'));
+		add_action('wp_ajax_delete_mp_image', array($this, 'ajax_delete_mp_image')); // ADD THIS LINE
+		add_action('wp_ajax_export_mp_data', array($this, 'ajax_export_mp_data'));
+		add_action('wp_ajax_reset_all_mp_data', array($this, 'ajax_reset_all_mp_data'));
+		add_action('wp_ajax_test_connection', array($this, 'ajax_test_connection'));
+		
+		// Small URL
+		add_action('wp_ajax_save_shared_simulation', array($this, 'ajax_save_shared_simulation'));
+		add_action('wp_ajax_nopriv_save_shared_simulation', array($this, 'ajax_save_shared_simulation'));
+		add_action('wp_ajax_load_shared_simulation', array($this, 'ajax_load_shared_simulation'));
+		add_action('wp_ajax_nopriv_load_shared_simulation', array($this, 'ajax_load_shared_simulation'));
     }
     
     public function init() {
@@ -129,6 +135,22 @@ class BahamasElectionMapEnhanced {
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+		
+		$shared_table = $wpdb->prefix . 'bahamas_shared_simulations';
+    
+		$shared_sql = "CREATE TABLE $shared_table (
+			id mediumint(9) NOT NULL AUTO_INCREMENT,
+			share_code varchar(10) NOT NULL,
+			simulation_data longtext NOT NULL,
+			created_at datetime DEFAULT CURRENT_TIMESTAMP,
+			expires_at datetime DEFAULT NULL,
+			view_count int DEFAULT 0,
+			PRIMARY KEY (id),
+			UNIQUE KEY share_code (share_code),
+			KEY expires_at (expires_at)
+		) $charset_collate;";
+
+		dbDelta($shared_sql);
     }
     
     public function insert_default_data() {
@@ -202,9 +224,15 @@ class BahamasElectionMapEnhanced {
     }
     
     public function enqueue_scripts() {
+		wp_enqueue_style(
+			'font-awesome',
+			'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
+			array(),
+			'6.0.0'
+		);
         wp_enqueue_script(
             'bahamas-election-enhanced-js',
-            BAHAMAS_ELECTION_PLUGIN_URL . 'assets/bahamas-election-enhanced.js',
+            BAHAMAS_ELECTION_PLUGIN_URL . 'assets/bahamas-election-enhanced.js?ac3a',
             array('jquery'),
             BAHAMAS_ELECTION_VERSION,
             true
@@ -212,7 +240,7 @@ class BahamasElectionMapEnhanced {
         
         wp_enqueue_style(
             'bahamas-election-enhanced-css',
-            BAHAMAS_ELECTION_PLUGIN_URL . 'assets/bahamas-election-enhanced.css',
+            BAHAMAS_ELECTION_PLUGIN_URL . 'assets/bahamas-election-enhanced.css?a',
             array(),
             BAHAMAS_ELECTION_VERSION
         );
@@ -823,9 +851,9 @@ class BahamasElectionMapEnhanced {
                         <span class="seat-count" id="ind-seats">0</span>
                     </div>
                 </div>
-                <div class="majority-indicator" id="majority-indicator">
+<!--                 <div class="majority-indicator" id="majority-indicator">
                     <span id="majority-text">No Majority</span>
-                </div>
+                </div> -->
             </div>
             
             <div class="map-controls">
@@ -883,14 +911,14 @@ class BahamasElectionMapEnhanced {
                             <span class="info-label">Constituency:</span>
                             <span id="info-constituency-name">-</span>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">Member Of Parliament:</span>
+<!--                         <div class="info-row">
+                            <span class="info-label">MP:</span>
                             <span id="info-mp-full">-</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Current Party:</span>
                             <span id="info-current-party">-</span>
-                        </div>
+                        </div> -->
 						<div class="info-row flip-row">
 							<span class="flip-label">Flip (Prediction):</span>
 							<span id="info-flip-prediction">-</span>
@@ -899,6 +927,13 @@ class BahamasElectionMapEnhanced {
                             <span class="info-label">Region:</span>
                             <span id="info-region">-</span>
                         </div>
+						 <button class="btn btn-reset mobile-btn reset-button" title="Reset to 2021 Election Results">
+							<span class="btn-icon">🔄</span> Reset to 2021
+						</button>
+						<label class="control-label colorblind-mode-label" title="Enable colorblind-friendly colors">
+							<input type="checkbox" class="colorblind-toggle"> 
+							<span class="checkbox-icon">🎨</span> Colorblind Mode
+						</label>
                     </div>  
                     <div class="legend-compact">
                         <div class="legend-title">Party Colors</div>
@@ -935,25 +970,25 @@ class BahamasElectionMapEnhanced {
         <?php echo json_encode($constituencies); ?>
         </script>
         <div class="social-share-container">
-            <span class="social-share-label">Share:</span>
-            <div class="social-share-buttons">
-                <a href="#" id="share-whatsapp" class="social-share-btn whatsapp-btn" title="Share on WhatsApp">
-                    <i class="fab fa-whatsapp"></i>
-                </a>
-                <a href="#" id="share-facebook" class="social-share-btn facebook-btn" title="Share on Facebook">
-                    <i class="fab fa-facebook-f"></i>
-                </a>
-                <a href="#" id="share-twitter" class="social-share-btn twitter-btn" title="Share on X/Twitter">
-                    <i class="fab fa-twitter"></i>
-                </a>
-                <a href="#" id="share-tiktok" class="social-share-btn tiktok-btn" title="Share on TikTok">
-                    <i class="fa fa-music"></i>
-                </a>
-                <a href="#" id="share-instagram" class="social-share-btn instagram-btn" title="Share on Instagram">
-                    <i class="fa fa-instagram"></i>
-                </a>
-            </div>
-        </div>
+    <span class="social-share-label"><i class="fa fa-share-alt">:</i></span>
+    <div class="social-share-buttons">
+        <a href="#" id="share-whatsapp" class="social-share-btn whatsapp-btn" title="Share on WhatsApp">
+            <i class="fa fa-whatsapp" aria-hidden="true"></i>
+        </a>
+        <a href="#" id="share-facebook" class="social-share-btn facebook-btn" title="Share on Facebook">
+            <i class="fa fa-facebook" aria-hidden="true"></i>
+        </a>
+        <a href="#" id="share-twitter" class="social-share-btn twitter-btn" title="Share on Twitter">
+           <i class="fa fa-twitter" aria-hidden="true"></i>
+        </a>
+        <a href="#" id="share-tiktok" class="social-share-btn tiktok-btn" title="Share on TikTok">
+            <i class="fa fa-music"></i>
+        </a>
+        <a href="#" id="share-instagram" class="social-share-btn instagram-btn" title="Share on Instagram">
+            <i class="fa fa-instagram"></i>
+        </a>
+    </div>
+</div>
         <?php
         return ob_get_clean();
     }
@@ -1928,6 +1963,120 @@ class BahamasElectionMapEnhanced {
         ));
     }
     
+/**
+ * Save shared simulation and return short code
+ */
+public function ajax_save_shared_simulation() {
+    check_ajax_referer('bahamas_election_nonce', 'nonce');
+    
+    // CRITICAL FIX: Don't use sanitize_text_field on JSON data!
+    // It destroys the JSON structure
+    $simulation_data = wp_unslash($_POST['simulation_data']);
+    
+    // Validate it's proper JSON
+    $decoded = json_decode($simulation_data, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        wp_send_json_error('Invalid simulation data format');
+        return;
+    }
+    
+    if (empty($simulation_data)) {
+        wp_send_json_error('No simulation data provided');
+        return;
+    }
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'bahamas_shared_simulations';
+    
+    // Generate unique 6-character code
+    do {
+        $share_code = $this->generate_share_code();
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_name WHERE share_code = %s",
+            $share_code
+        ));
+    } while ($exists > 0);
+    
+    // Set expiration to 1 year from now
+    $expires_at = date('Y-m-d H:i:s', strtotime('+1 year'));
+    
+    $result = $wpdb->insert(
+        $table_name,
+        array(
+            'share_code' => $share_code,
+            'simulation_data' => $simulation_data, // Store the raw JSON
+            'expires_at' => $expires_at
+        ),
+        array('%s', '%s', '%s')
+    );
+    
+    if ($result) {
+        // Clean up old expired simulations (optional)
+        $wpdb->query("DELETE FROM $table_name WHERE expires_at < NOW()");
+        
+        wp_send_json_success(array(
+            'share_code' => $share_code,
+            'share_url' => home_url('?share=' . $share_code),
+            'expires_at' => $expires_at
+        ));
+    } else {
+        wp_send_json_error('Failed to save simulation');
+    }
+}
+
+/**
+ * Load shared simulation by code
+ */
+public function ajax_load_shared_simulation() {
+    check_ajax_referer('bahamas_election_nonce', 'nonce');
+    
+    $share_code = sanitize_text_field($_POST['share_code']);
+    
+    if (empty($share_code)) {
+        wp_send_json_error('No share code provided');
+        return;
+    }
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'bahamas_shared_simulations';
+    
+    $simulation = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table_name WHERE share_code = %s AND (expires_at IS NULL OR expires_at > NOW())",
+        $share_code
+    ));
+    
+    if ($simulation) {
+        // Increment view count
+        $wpdb->update(
+            $table_name,
+            array('view_count' => $simulation->view_count + 1),
+            array('share_code' => $share_code),
+            array('%d'),
+            array('%s')
+        );
+        
+        wp_send_json_success(array(
+            'simulation_data' => $simulation->simulation_data,
+            'created_at' => $simulation->created_at,
+            'view_count' => $simulation->view_count + 1
+        ));
+    } else {
+        wp_send_json_error('Simulation not found or expired');
+    }
+}
+
+/**
+ * Generate a random 6-character share code
+ */
+private function generate_share_code($length = 6) {
+    $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excludes confusing chars
+    $code = '';
+    for ($i = 0; $i < $length; $i++) {
+        $code .= $characters[random_int(0, strlen($characters) - 1)];
+    }
+    return $code;
+}
+	
     public function ajax_update_constituency() {
         check_ajax_referer('bahamas_election_nonce', 'nonce');
         
