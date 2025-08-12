@@ -15,14 +15,18 @@
 
 /* Enhanced Seat Counter */
 .seat-counter {
-    background: linear-gradient(90deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.83) 50%, rgba(0, 0, 0, 1) 100%, rgba(0, 0, 0, 1) 100%);
+    background: linear-gradient(90deg, #5a5a5a 0%, #a0a0a0 77%, #a0a0a0 100%);
     color: white;
     border-radius: 15px;
     padding: 25px;
     margin-bottom: 25px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.1);
 }
-
+@media screen and (max-width: 600px) {
+	.seat-counter {
+		display: none;
+	}	
+}
 .seat-counter h3 {
     margin: 0 0 20px 0;
     text-align: center;
@@ -45,6 +49,9 @@
 .region-info {
     text-align: center;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .region-info strong {
@@ -59,14 +66,15 @@
     justify-content: space-around;
     flex-wrap: wrap;
     gap: 15px;
-    margin-bottom: 20px;
+/*     margin-bottom: 20px; */
 }
 
 .party-count {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 15px 20px;
+    flex-direction: row;
+	gap: 5px;
+	align-items: center;
+    padding: 0px 20px;
     border-radius: 12px;
     background: rgba(255,255,255,0.9);
     color: #333;
@@ -216,7 +224,7 @@
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
     overflow: visible;
     position: relative;
@@ -366,16 +374,10 @@ svg path[style*="transform"] {
     margin-bottom: 20px;
 }
 
-.info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
+
 
 .info-label {
+	text-align: left;
     font-size: 12px;
     font-weight: 600;
     color: #6c757d;
@@ -865,7 +867,12 @@ label.mp-photo{
 .close-shortcuts:hover {
     background: #0056b3;
 }
-
+.mobile-btn{
+	display:none;
+}
+.colorblind-mode-label{
+	display:none;
+}
 /* ================== RESPONSIVE DESIGN ================== */
 @media (max-width: 1200px) {
     .constituency-info-overlay {
@@ -938,19 +945,15 @@ label.mp-photo{
     }
 }
 
-@media (max-width: 768px) {
-    #bahamas-election-container {
-        padding: 15px;
-    }
-    
+@media (max-width: 768px) {    
     .party-totals {
         justify-content: center;
         gap: 10px;
     }
     
     .party-count {
-        min-width: 70px;
-        padding: 12px 16px;
+        min-width: 55px;
+        padding: 0px 16px;
     }
     
     .party-name {
@@ -989,14 +992,8 @@ label.mp-photo{
         font-size: 14px;
     }
     
-    .info-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
-    }
-    
     .info-row span:last-child {
-        text-align: left;
+        text-align: center;
     }
     
     .party-buttons-grid {
@@ -1014,12 +1011,28 @@ label.mp-photo{
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
+	.seat-counter{
+		box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(15px) !important;
+        background: rgba(255,255,255,0.1) !important;
+		padding: 10px !important;
+	}
     .seat-counter h3 {
+		display:none;
         font-size: 18px;
     }
-    
+	.mobile-btn{
+		display: block;
+		margin-top: 10px;
+	}
+	.colorblind-mode-label{
+		display:block;
+		margin-top: 10px;
+	}
     .regional-breakdown {
+		display: none;
         padding: 10px;
     }
     
@@ -1035,9 +1048,8 @@ label.mp-photo{
     }
     
     .party-count {
-        width: 100%;
-        max-width: 100px;
-        flex-direction: row;
+        max-width: 55px;
+        flex-direction: column;
         justify-content: space-between;
     }
     
