@@ -1,6 +1,6 @@
 /**
- * COMPLETE UPDATED JavaScript for Overlay Layout
- * Client-side only simulations with new overlay styling
+ * COMPLETE UPDATED JavaScript for Overlay Layout with Mobile Social Icons
+ * Client-side only simulations with new overlay styling and mobile social repositioning
  */
 
 jQuery(document).ready(function($) {
@@ -102,19 +102,37 @@ jQuery(document).ready(function($) {
     init();
     
     function init() {
-        injectOverlayStyles(); // CRITICAL: Inject styles first
-        loadConstituencyData();
+    injectOverlayStyles();
+    injectStickySeatCounterStyles();
+    injectMobileSocialStyles();
+    loadConstituencyData();
+    injectStickyOverlayStyles();
+    
+    // CRITICAL FIX: Load shared simulation FIRST, before any other initialization
+    const hasSharedSimulation = loadSimulationFromUrl();
+    
+    if (!hasSharedSimulation) {
+        // Only load database state if no shared simulation
         loadCurrentDatabaseState();
-		initializeFlipPredictions();
-        setupEventListeners();
-        setupImageErrorHandling(); // Add image error handling
-        loadEnhancedSVGMap();
-        initializeColorblindMode();
-        setTimeout(() => {
-            enhanceForMobile();
-        }, 1000);
-        console.log('🎉 Bahamas Election Map initialized with overlay layout!');
+        initializeFlipPredictions();
     }
+    
+    setupEventListeners();
+    setupImageErrorHandling();
+    loadEnhancedSVGMap();
+    initializeColorblindMode();
+    injectEnhancedStickyStyles();
+    
+    setTimeout(() => {
+        initializeStickySeatCounter();
+        enhanceForMobile();
+        initializeStickyConstituencyOverlay();
+        repositionSocialIconsForMobile();
+    }, 1000);
+    
+    console.log('🎉 Bahamas Election Map initialized with short URL sharing!');
+}
+
 	
 	function loadCurrentDatabaseState() {
         console.log('📊 Loading current database state...');
@@ -169,7 +187,169 @@ jQuery(document).ready(function($) {
         });
     }
     
-	
+	function injectMobileSocialStyles() {
+    if ($('#bahamas-mobile-social-styles').length === 0) {
+        const mobileSocialCSS = `
+            <style id="bahamas-mobile-social-styles">
+            /* Parent Container for MP Avatar + Social Icons - MOBILE ONLY */
+            @media (max-width: 768px) {
+                .parent-info {
+                    display: flex !important;
+                    flex-direction: column;
+                    gap: 15px;
+                    margin-bottom: 20px;
+                    background: rgba(255, 255, 255, 0.95);
+                    border-radius: 12px;
+                    padding: 15px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+                    align-items: center;
+                    text-align: center;
+                }
+                
+                /* Mobile Social Icons within Parent Container */
+                .parent-info .social-share-container.mobile-social-icons {
+                    margin: 0 !important;
+                    padding: 10px !important;
+                    background: rgba(248, 249, 250, 0.8) !important;
+                    border-radius: 8px !important;
+                    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+                    align-self: stretch !important;
+                    flex-direction: row;
+                }
+                
+                .parent-info .social-share-container.mobile-social-icons .social-share-label {
+                    font-size: 15px !important;
+                    margin-bottom: 8px !important;
+                    text-align: center !important;
+                    width: 5% !important;
+                    color: #6c757d !important;
+                    text-transform: uppercase !important;
+                    letter-spacing: 0.5px !important;
+                }
+                
+                .parent-info .social-share-container.mobile-social-icons .social-share-buttons {
+                    justify-content: center !important;
+                    gap: 10px !important;
+                    flex-wrap: wrap !important;
+                    width: 88%;
+                }
+                
+                .parent-info .social-share-container.mobile-social-icons .social-share-btn {
+                    width: 36px !important;
+                    height: 36px !important;
+                    line-height: 32px !important;
+                    font-size: 20px !important;
+                    border-radius: 50% !important;
+                    transition: transform 0.2s ease !important;
+                }
+                
+                /* MP Avatar adjustments within parent container - MOBILE ONLY */
+                .parent-info .mp-avatar {
+                    position: relative !important;
+                    top: auto !important;
+                    right: auto !important;
+                    margin: 0 !important;
+                    padding: 10px !important;
+                    background: transparent !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                }
+                
+                .constituency-info-overlay {
+                    display: flex !important;
+                    flex-direction: column !important;
+                }
+                
+                .constituency-info-overlay .parent-info {
+                    order: 1 !important;
+                }
+                
+                .constituency-info-overlay .info-details {
+                    order: 2 !important;
+                }
+                
+                .constituency-info-overlay .legend-compact {
+                    order: 3 !important;
+                }
+            }
+            
+            @media (max-width: 520px) {
+                .parent-info {
+                    margin-top: 20px;
+                    padding: 10px !important;
+                    gap: 12px !important;
+                }
+                .map-controls {
+                    display: none;
+                }
+            }
+            
+            /* Extra small screens */
+            @media (max-width: 480px) {
+                .parent-info {
+                    margin-top: 20px;
+                    padding: 26px !important;
+                    gap: 12px !important;
+                }
+                
+                .parent-info .social-share-container.mobile-social-icons {
+                    padding: 8px !important;
+                }
+                
+                .parent-info .social-share-container.mobile-social-icons .social-share-btn {
+                    width: 32px !important;
+                    height: 32px !important;
+                    line-height: 30px !important;
+                    font-size: 20px !important;
+                }
+            }
+            
+            /* DESKTOP - NO STICKY, just absolute positioning */
+            @media (min-width: 769px) {
+                /* Desktop MP Avatar Positioning - NO STICKY */
+                .mp-avatar {
+                    position: absolute !important;
+                    top: 20px !important;
+                    right: 347px !important;
+                    transition: all 0.3s ease !important;
+                    z-index: 10 !important;
+                }
+                
+                /* Remove all sticky states for desktop */
+                .mp-avatar.sticky {
+                    position: absolute !important; /* Keep absolute, not fixed */
+                    top: 20px !important;
+                    right: 347px !important;
+                    z-index: 10 !important; /* Lower z-index */
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important; /* Regular shadow */
+                    backdrop-filter: none !important;
+                    -webkit-backdrop-filter: none !important;
+                    background: rgba(255, 255, 255, 0.95) !important;
+                    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+                    animation: none !important; /* No animation */
+                }
+                
+                .constituency-info-overlay.sticky {
+                    position: absolute !important; /* Keep absolute, not fixed */
+                    top: 20px !important;
+                    right: 20px !important;
+                    z-index: 10 !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+                    backdrop-filter: blur(10px) !important;
+                    -webkit-backdrop-filter: blur(10px) !important;
+                    background: rgba(255, 255, 255, 0.95) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                    animation: none !important;
+                }
+            }
+            </style>
+        `;
+        
+        $('head').append(mobileSocialCSS);
+        console.log('✅ Mobile social styles with desktop non-sticky support injected');
+    }
+}
 	
     // CRITICAL: Inject overlay styles if not already present
     function injectOverlayStyles() {
@@ -180,7 +360,7 @@ jQuery(document).ready(function($) {
                 .map-container-with-overlay {
                     position: relative !important;
                     width: 100% !important;
-                    margin-bottom: 30px !important;
+                    margin-bottom: 0px !important;
                 }
                 
                 #bahamas-map {
@@ -188,10 +368,10 @@ jQuery(document).ready(function($) {
                     border-radius: 15px !important;
                     padding: 20px !important;
                     min-height: 800px !important;
-                    width: 100% !important;
+                    width: 80% !important;
                     display: flex !important;
                     align-items: center !important;
-                    justify-content: center !important;
+                    justify-content: flex-start !important;
                     box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
                     overflow: hidden !important;
                     position: relative !important;
@@ -334,7 +514,6 @@ jQuery(document).ready(function($) {
                     padding: 0px 0 !important;
                     border-bottom: 0px solid rgba(0, 0, 0, 0.05) !important;
                 }
-                
                 .info-label {
                     font-size: 12px !important;
                     font-weight: 600 !important;
@@ -432,7 +611,6 @@ jQuery(document).ready(function($) {
                     border: 1px solid rgba(0, 0, 0, 0.2) !important;
                     flex-shrink: 0 !important;
                 }
-                
                 /* Legend colors */
                 .plp-color { background: linear-gradient(135deg, #FFD700, #FFA500) !important; }
                 .fnm-color { background: linear-gradient(135deg, #FF0000, #CC0000) !important; }
@@ -474,46 +652,14 @@ jQuery(document).ready(function($) {
                 }
                 
                 #mobile-zoom-controls {
-                    position: absolute !important;
-                    bottom: 20px !important;
-                    right: 20px !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    gap: 10px !important;
-                    z-index: 1000 !important;
-                    pointer-events: auto !important;
-                    touch-action: auto !important;
-                }
-                
-                .zoom-control-btn {
-                    width: 50px !important;
-                    height: 50px !important;
-                    border-radius: 50% !important;
-                    border: none !important;
-                    background: rgba(0, 0, 0, 0.8) !important;
-                    color: white !important;
-                    font-size: 24px !important;
-                    font-weight: bold !important;
-                    cursor: pointer !important;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-                    transition: all 0.3s ease !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    user-select: none !important;
-                    touch-action: manipulation !important;
-                }
-                
-                .zoom-control-btn:hover,
-                .zoom-control-btn:active {
-                    background: rgba(0, 0, 0, 0.9) !important;
-                    transform: scale(1.05) !important;
-                }
-                
-                .zoom-control-btn:active {
-                    transform: scale(0.95) !important;
-                }
-                
+					display: none !important;
+				}
+
+				/* Remove all zoom control button styles since they won't be used */
+				.zoom-control-btn {
+					display: none !important;
+				}
+
                 /* Hide old layout elements */
                 .bottom-controls-section,
                 .bottom-controls-grid,
@@ -534,7 +680,7 @@ jQuery(document).ready(function($) {
                         top: auto !important;
                         right: auto !important;
                         width: 100% !important;
-                        margin-top: 20px !important;
+                        margin-top: -20px !important;
                         max-height: none !important;
                         background: white !important;
                         backdrop-filter: none !important;
@@ -551,13 +697,12 @@ jQuery(document).ready(function($) {
                         top: auto !important;
                         right: auto !important;
                         margin-top: 20px !important;
-                        max-width: 300px !important;
                     }
 					.parent-info{
 						display:flex;
 						flex-direction: row;
 						gap: 10px;
-						margin-bottom: 20px;
+						margin-bottom: 0px;
 					}
                 }
 
@@ -565,6 +710,7 @@ jQuery(document).ready(function($) {
                     #bahamas-map {
                         min-height: 260px !important;
                         touch-action: none !important;
+						width: 100% !important;
                     }
                     
                     .mp-photo-container {
@@ -587,21 +733,22 @@ jQuery(document).ready(function($) {
 
                     .avatar-icon {
                         font-size: 36px;
+						display: none !important;
                     }
                     #info-mp-name {
                         font-size: 14px;
                     }
                     
-                    #mobile-zoom-controls {
-                        display: flex !important;
-                    }
+                   #mobile-zoom-controls {
+						display: none !important;
+					}
                     .map-container-with-overlay {
                         display: flex !important;
                         flex-direction: column-reverse !important;
                     }
                     .constituency-info-overlay {
                         width: 100% !important;
-                        max-height: 300px !important;
+                        max-height: 440px !important;
                         bottom: 20px !important;
                         top: 0px !important;
                         right: 0px !important;
@@ -614,7 +761,15 @@ jQuery(document).ready(function($) {
                     }
 					 .parent-info{
 						display:flex;
-						flex-direction: column;
+						flex-direction: row;
+					}
+					.info-row {
+						flex-direction: row;
+						align-items: flex-start !important;
+						gap: 4px;
+					}
+					.info-row span:last-child{
+						text-align: center !important;
 					}
                 }
 
@@ -680,6 +835,504 @@ jQuery(document).ready(function($) {
         showNotification('Reset to 2021 Election Results (Simulation Only)', 'success');
     }
     
+function injectStickySeatCounterStyles() {
+    if ($('#bahamas-sticky-seat-counter-styles').length === 0) {
+        const stickyCSS = `
+            <style id="bahamas-sticky-seat-counter-styles">
+            /* Sticky Seat Counter Styles - MOBILE/TABLET ONLY */
+            @media (max-width: 768px) {
+                .seat-counter {
+                    position: relative !important;
+                    transition: all 0.3s ease !important;
+                    z-index: 999 !important;
+                }
+                
+                .seat-counter.sticky {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    z-index: 1000 !important;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+                    backdrop-filter: blur(10px) !important;
+                    -webkit-backdrop-filter: blur(15px) !important;
+                    background: white !important;
+                    border-radius: 0 !important;
+                    margin-bottom: 0 !important;
+                    padding: 12px 15px !important;
+                    animation: stickySlideIn 0.3s ease-out !important;
+                    display: block !important;
+                }
+                
+                .seat-counter.sticky h3,
+                .seat-counter.sticky .regional-breakdown,
+                .seat-counter.sticky #majority-indicator {
+                    display: none !important;
+                }
+                
+                .seat-counter.sticky .party-totals {
+                    justify-content: center !important;
+                    margin-bottom: 0 !important;
+                    gap: 8px !important;
+                    flex-wrap: nowrap;
+                }
+                
+                .seat-counter.sticky .party-count {
+                    min-width: 60px !important;
+                    padding: 8px 12px !important;
+                    flex-direction: row !important;
+                    justify-content: space-between !important;
+                    align-items: center !important;
+                }
+                
+                .seat-counter.sticky .party-name {
+                    font-size: 12px !important;
+                }
+                
+                .seat-counter.sticky .seat-count {
+                    font-size: 18px !important;
+                }
+                
+                /* WordPress admin bar on mobile */
+                @media (max-width: 782px) {
+                    .admin-bar .seat-counter.sticky {
+                        top: 0px !important;
+                    }
+                }
+                
+                /* Sticky animation */
+                @keyframes stickySlideIn {
+                    from {
+                        transform: translateY(-100%) !important;
+                        opacity: 0 !important;
+                    }
+                    to {
+                        transform: translateY(0) !important;
+                        opacity: 1 !important;
+                    }
+                }
+            }
+            
+            /* Desktop - NO STICKY */
+            @media (min-width: 769px) {
+                .seat-counter.sticky {
+                    position: relative !important; /* Override to relative */
+                    top: auto !important;
+                    left: auto !important;
+                    right: auto !important;
+                    z-index: auto !important;
+                    box-shadow: none !important;
+                    backdrop-filter: none !important;
+                    -webkit-backdrop-filter: none !important;
+                    animation: none !important;
+                }
+            }
+            
+            /* Sticky placeholder */
+            .seat-counter-placeholder {
+                display: none !important;
+                height: 0 !important;
+                transition: height 0.3s ease !important;
+            }
+            
+            .seat-counter-placeholder.active {
+                display: block !important;
+            }
+            
+            /* Ensure overlay doesn't conflict with sticky counter */
+            .constituency-info-overlay {
+                z-index: 10 !important;
+            }
+            
+            /* Extra small screens */
+            @media (max-width: 480px) {
+                .seat-counter.sticky {
+                    padding: 10px 12px !important;
+                }
+                
+                .seat-counter.sticky .party-count {
+                    min-width: 70px !important;
+                    padding: 6px 10px !important;
+                }
+                
+                .seat-counter.sticky .party-name {
+                    font-size: 10px !important;
+                }
+                
+                .seat-counter.sticky .seat-count {
+                    font-size: 16px !important;
+                }
+                
+                .legend-compact{
+                    display:none;
+                }
+                
+                .majority-indicator.has-majority{
+                    display: none;
+                }
+            }
+            </style>
+        `;
+        
+        $('head').append(stickyCSS);
+        console.log('✅ Mobile/tablet-only sticky seat counter styles injected');
+    }
+}
+
+// Add this new function to initialize sticky functionality
+function initializeStickySeatCounter() {
+    console.log('🔧 Initializing sticky seat counter...');
+    
+    // Only initialize sticky for mobile/tablet
+    if (window.innerWidth > 768) {
+        console.log('📱 Desktop detected, skipping sticky seat counter');
+        return;
+    }
+    
+    const seatCounter = document.querySelector('.seat-counter');
+    
+    if (!seatCounter) {
+        console.warn('⚠️ Seat counter not found');
+        return;
+    }
+    
+    console.log('✅ Found seat counter for mobile/tablet');
+    const placeholder = document.createElement('div');
+    placeholder.className = 'seat-counter-placeholder';
+    seatCounter.parentNode.insertBefore(placeholder, seatCounter.nextSibling);
+
+    let isSticky = false;
+    let seatCounterHeight = 0;
+    let seatCounterTop = 0;
+
+    function updateMeasurements() {
+        if (!isSticky) {
+            const rect = seatCounter.getBoundingClientRect();
+            seatCounterHeight = rect.height;
+            seatCounterTop = rect.top + window.pageYOffset;
+        }
+    }
+    
+    function makeSticky() {
+        if (!isSticky && window.innerWidth <= 768) { // Only sticky on mobile/tablet
+            const currentRect = seatCounter.getBoundingClientRect();
+            placeholder.style.height = currentRect.height + 'px';
+            placeholder.style.width = currentRect.width + 'px';
+            placeholder.style.marginTop = getComputedStyle(seatCounter).marginTop;
+            placeholder.style.marginBottom = getComputedStyle(seatCounter).marginBottom;
+            placeholder.classList.add('active');
+
+            requestAnimationFrame(() => {
+                isSticky = true;
+                seatCounter.classList.add('sticky');
+                seatCounter.style.transform = 'translateZ(0)';
+                hideThemeStickyHeader();
+                console.log('📌 Seat counter is now sticky (mobile/tablet)');
+            });
+        }
+    }
+    
+    function removeSticky() {
+        if (isSticky) {
+            isSticky = false;
+            seatCounter.classList.remove('sticky');
+            placeholder.classList.remove('active');
+            placeholder.style.height = '0px';
+            placeholder.style.width = '';
+            placeholder.style.marginTop = '';
+            placeholder.style.marginBottom = '';
+            showThemeStickyHeader();
+            console.log('📌 Seat counter sticky removed');
+        }
+    }
+    
+    let scrollTimeout;
+    function handleScroll() {
+        // Skip if desktop
+        if (window.innerWidth > 768) {
+            removeSticky();
+            return;
+        }
+        
+        if (scrollTimeout) {
+            cancelAnimationFrame(scrollTimeout);
+        }
+
+        scrollTimeout = requestAnimationFrame(() => {
+            const scrollTop = window.pageYOffset;
+            const adminBarHeight = document.body.classList.contains('admin-bar') ? 
+                  (window.innerWidth <= 782 ? 46 : 32) : 0;
+
+            const delayOffset = 50; // 50px delay for mobile
+            const shouldBeSticky = scrollTop > seatCounterTop - adminBarHeight + delayOffset;
+
+            if (shouldBeSticky && !isSticky) {
+                makeSticky();
+            } else if (!shouldBeSticky && isSticky) {
+                removeSticky();
+            }
+        });
+    }
+    
+    // Helper functions remain the same...
+    function hideThemeStickyHeader() {
+        const themeHeaderSelectors = [
+            '.admin-bar .mkd-page-header .mkd-sticky-header.header-appear',
+            '.mkd-page-header .mkd-sticky-header.header-appear',
+            '.mkd-sticky-header.header-appear',
+            '.mkd-page-header .mkd-sticky-header',
+            '.header-appear',
+            '.sticky-header',
+            '.fixed-header',
+            '.site-header.sticky'
+        ];
+        themeHeaderSelectors.forEach(selector => {
+            const headers = document.querySelectorAll(selector);
+            headers.forEach(header => {
+                if (header && !header.hasAttribute('data-bahamas-hidden')) {
+                    header.setAttribute('data-bahamas-original-display', getComputedStyle(header).display);
+                    header.setAttribute('data-bahamas-hidden', 'true');
+                    header.style.display = 'none !important';
+                }
+            });
+        });
+    }
+    
+    function showThemeStickyHeader() {
+        const hiddenHeaders = document.querySelectorAll('[data-bahamas-hidden="true"]');
+        hiddenHeaders.forEach(header => {
+            const originalDisplay = header.getAttribute('data-bahamas-original-display');
+            header.style.display = originalDisplay || '';
+            header.removeAttribute('data-bahamas-hidden');
+            header.removeAttribute('data-bahamas-original-display');
+        });
+    }
+
+    // Initialize measurements and add event listeners
+    updateMeasurements();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', () => {
+        updateMeasurements();
+        handleScroll();
+    });
+
+    console.log('✅ Mobile/tablet sticky seat counter initialized successfully');
+}
+	
+	// Add this CSS to your injectOverlayStyles() function or create a separate function
+function injectStickyOverlayStyles() {
+    if ($('#bahamas-sticky-overlay-styles').length === 0) {
+        const stickyOverlayCSS = `
+            <style id="bahamas-sticky-overlay-styles">
+            /* Sticky Constituency Info Overlay Styles - DESKTOP ONLY */
+            @media (min-width: 1026px) {
+                .constituency-info-overlay {
+                    position: absolute !important;
+                    top: 20px !important;
+                    right: 20px !important;
+                    width: 320px !important;
+                    transition: all 0.3s ease !important;
+                    z-index: 10 !important;
+                }
+                
+                .constituency-info-overlay.sticky {
+                    position: fixed !important;
+                    top: 20px !important;
+                    right: 20px !important;
+                    z-index: 1001 !important;
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.25) !important;
+                    backdrop-filter: blur(15px) !important;
+                    -webkit-backdrop-filter: blur(15px) !important;
+                    background: rgba(255, 255, 255, 0.98) !important;
+                    border: 2px solid rgba(255, 255, 255, 0.5) !important;
+                    animation: stickyOverlaySlideIn 0.3s ease-out !important;
+                    max-height: calc(100vh - 40px) !important;
+                    width: 320px !important;
+                }
+                
+                /* MP Avatar sticky positioning */
+                .mp-avatar {
+                    position: absolute !important;
+                    top: 20px !important;
+                    right: 347px !important;
+                    transition: all 0.3s ease !important;
+                    z-index: 9 !important;
+                }
+                
+                .mp-avatar.sticky {
+                    position: fixed !important;
+                    top: 20px !important;
+                    right: 347px !important;
+                    z-index: 1002 !important;
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.25) !important;
+                    backdrop-filter: blur(15px) !important;
+                    -webkit-backdrop-filter: blur(15px) !important;
+                    background: rgba(255, 255, 255, 0.98) !important;
+                    border: 2px solid rgba(255, 255, 255, 0.5) !important;
+                    animation: stickyAvatarSlideIn 0.3s ease-out !important;
+                }
+                
+                /* Adjust for sticky seat counter */
+                .seat-counter.sticky ~ * .constituency-info-overlay.sticky,
+                .constituency-info-overlay.sticky.with-sticky-counter {
+                    top: 120px !important;
+                    max-height: calc(100vh - 140px) !important;
+                }
+                
+                .seat-counter.sticky ~ * .mp-avatar.sticky,
+                .mp-avatar.sticky.with-sticky-counter {
+                    top: 120px !important;
+                }
+                
+                /* WordPress admin bar compatibility */
+                .admin-bar .constituency-info-overlay.sticky {
+                    top: 52px !important;
+                }
+                
+                .admin-bar .mp-avatar.sticky {
+                    top: 52px !important;
+                }
+                
+                .admin-bar .constituency-info-overlay.sticky.with-sticky-counter {
+                    top: 140px !important;
+                }
+                
+                .admin-bar .mp-avatar.sticky.with-sticky-counter {
+                    top: 140px !important;
+                }
+                
+                /* Animation for sticky overlay */
+                @keyframes stickyOverlaySlideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                
+                /* Animation for sticky avatar */
+                @keyframes stickyAvatarSlideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                
+                @keyframes stickyPinPulse {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.2); }
+                }
+                
+                /* Ensure overlay content remains scrollable when sticky */
+                .constituency-info-overlay.sticky .info-details {
+                    max-height: calc(100% - 100px) !important;
+                    overflow-y: auto !important;
+                }
+            }
+            
+            /* Mobile - keep relative positioning */
+            @media (max-width: 1025px) {
+                .constituency-info-overlay.sticky {
+                    position: relative !important;
+                    top: auto !important;
+                    right: auto !important;
+                    width: 100% !important;
+                    max-height: none !important;
+                    background: white !important;
+                    backdrop-filter: none !important;
+                    -webkit-backdrop-filter: none !important;
+                    animation: none !important;
+                    box-shadow: none !important;
+                    border: 1px solid #ddd !important;
+                }
+                
+                .mp-avatar.sticky {
+                    position: relative !important;
+                    top: auto !important;
+                    right: auto !important;
+                    z-index: auto !important;
+                    box-shadow: none !important;
+                    background: rgba(255, 255, 255, 0.95) !important;
+                    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+                }
+            }
+            </style>
+        `;
+        
+        $('head').append(stickyOverlayCSS);
+        console.log('✅ Sticky overlay styles with avatar support injected');
+    }
+}
+
+// Add this new function to initialize sticky functionality for constituency overlay
+function initializeStickyConstituencyOverlay() {
+    console.log('🔧 Sticky overlay disabled for all devices');
+    // Completely disabled - no sticky behavior for constituency overlay or mp-avatar
+    return;
+}
+
+// Also update the CSS injection to handle dynamic positioning
+function injectEnhancedStickyStyles() {
+    if ($('#bahamas-enhanced-sticky-styles').length === 0) {
+        const enhancedStickyCSS = `
+            <style id="bahamas-enhanced-sticky-styles">
+            /* Enhanced Sticky Styles with Dynamic Positioning */
+            @media (min-width: 1026px) {
+                .constituency-info-overlay.sticky,
+                .mp-avatar.sticky {
+                    position: fixed !important;
+                    z-index: 999 !important;
+                    transition: top 0.3s ease, transform 0.3s ease !important;
+                }
+                
+                .constituency-info-overlay.sticky {
+                    right: 20px !important;
+                    width: 320px !important;
+                    max-height: calc(100vh - var(--sticky-top, 40px) - 20px) !important;
+                }
+                
+                .mp-avatar.sticky {
+                    right: 347px !important;
+                }
+                
+                /* Smooth transition when sticky state changes */
+                .constituency-info-overlay,
+                .mp-avatar {
+                    transition: all 0.3s ease !important;
+                }
+                
+                /* Ensure proper stacking with theme headers */
+                .mkd-sticky-header,
+                .sticky-header,
+                .fixed-header {
+                    z-index: 998 !important;
+                }
+                
+                .seat-counter.sticky {
+                    z-index: 997 !important;
+                }
+                
+                /* Handle overlapping scenarios */
+                body:has(.mkd-sticky-header.header-appear) .constituency-info-overlay.sticky,
+                body:has(.mkd-sticky-header.header-appear) .mp-avatar.sticky {
+                    z-index: 996 !important;
+                }
+            }
+            </style>
+        `;
+        
+        $('head').append(enhancedStickyCSS);
+        console.log('✅ Enhanced sticky styles injected');
+    }
+}
+	
 	function saveSimulationToDatabase() {
         if (!confirm('Save current simulation to database? This will overwrite the stored party data.')) {
             return;
@@ -806,6 +1459,9 @@ jQuery(document).ready(function($) {
         $('#reset-to-2021').on('click', function() {
             resetFlipPredictionsTo2021();
         });
+		$(document).on('click', '.reset-button', function() {
+			resetFlipPredictionsTo2021();
+		});
         
         // ADD: Save simulation button (if you want this feature)
         if ($('#save-simulation').length) {
@@ -818,7 +1474,51 @@ jQuery(document).ready(function($) {
         $('#colorblind-mode').on('change', function() {
             toggleColorblindMode();
         });
-        
+		 $(document).on('change', '.colorblind-toggle', function() {
+			const isChecked = $(this).is(':checked');
+
+			// Sync all colorblind checkboxes to the same state
+			$('.colorblind-toggle').prop('checked', isChecked);
+
+			// Apply the colorblind mode
+			if (isChecked !== isColorblindMode) {
+				toggleColorblindMode();
+			}
+    	});
+       $(document).on('click', '.social-share-label', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('🔗 Share icon clicked - generating short link...');
+    
+    // Show loading state
+    showNotification('Creating shareable link...', 'info', 1000);
+    
+    // Generate the simulation URL (returns a Promise)
+    generateSimulationUrl().then(simulationUrl => {
+        // Copy to clipboard
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(simulationUrl).then(() => {
+                showShareIconFeedback($(this));
+                showNotification('Short link copied to clipboard! 📋', 'success', 3000);
+                console.log('✅ Short simulation URL copied to clipboard via share icon:', simulationUrl);
+            }).catch((error) => {
+                console.warn('⚠️ Clipboard API failed, using fallback');
+                fallbackCopyToClipboard(simulationUrl);
+                showShareIconFeedback($(this));
+            });
+        } else {
+            console.log('ℹ️ Using fallback copy method for share icon');
+            fallbackCopyToClipboard(simulationUrl);
+            showShareIconFeedback($(this));
+        }
+    }).catch(error => {
+        console.error('❌ Failed to generate share URL:', error);
+        showNotification('Failed to create share link', 'error');
+    });
+});
+    
+    console.log('✅ Share icon click handler setup complete');
         // Download SVG
         $('#download-svg').on('click', function() {
             downloadSVG();
@@ -836,6 +1536,14 @@ jQuery(document).ready(function($) {
         });
         
         setupSocialShareListeners();
+        
+        // NEW: Add resize listener for mobile social repositioning
+        window.addEventListener('resize', function() {
+		clearTimeout(window.resizeTimeout);
+		window.resizeTimeout = setTimeout(() => {
+			repositionSocialIconsForMobile();
+		}, 250);
+	});
         
         console.log('✅ Event listeners set up');
     }
@@ -932,7 +1640,6 @@ jQuery(document).ready(function($) {
         updateConstituency(constituencyId, newParty);
         
         const constituencyName = constituencyData[constituencyId]?.constituency_name || `Constituency ${constituencyId}`;
-        showNotification(`${constituencyName} → ${PARTY_NAMES[newParty]}`, 'info', 2000);
         
         // Add pulse effect to party badge
         const partyBadge = $('#info-party-badge');
@@ -1062,29 +1769,37 @@ jQuery(document).ready(function($) {
     }
     
     function updateSeatCounts() {
-        const counts = {
-            'PLP': 0, 'FNM': 0, 'COI': 0, 'DNA': 0, 'IND': 0
-        };
+    const counts = {
+        'PLP': 0, 'FNM': 0, 'COI': 0, 'DNA': 0, 'IND': 0
+    };
+    
+    Object.values(flipPredictions).forEach(party => {
+        if (counts.hasOwnProperty(party)) {
+            counts[party]++;
+        }
+    });
+    
+    Object.keys(counts).forEach(party => {
+        $(`#${party.toLowerCase()}-seats`).text(counts[party]);
         
-         Object.values(flipPredictions).forEach(party => {
-            if (counts.hasOwnProperty(party)) {
-                counts[party]++;
-            }
-        });
-        
-        Object.keys(counts).forEach(party => {
-            $(`#${party.toLowerCase()}-seats`).text(counts[party]);
-            
-            const partyElement = $(`.${party.toLowerCase()}-count`);
-            if (counts[party] >= 20) {
-                partyElement.addClass('majority-party');
-            } else {
-                partyElement.removeClass('majority-party');
-            }
-        });
-        
-        updateMajorityIndicator(counts);
+        const partyElement = $(`.${party.toLowerCase()}-count`);
+        if (counts[party] >= 20) {
+            partyElement.addClass('majority-party');
+        } else {
+            partyElement.removeClass('majority-party');
+        }
+    });
+    
+    updateMajorityIndicator(counts);
+    
+    // NEW: Add visual feedback when counts update and counter is sticky
+    if ($('.seat-counter').hasClass('sticky')) {
+        $('.seat-counter').addClass('updated');
+        setTimeout(() => {
+            $('.seat-counter').removeClass('updated');
+        }, 500);
     }
+}
     
     function updateMajorityIndicator(counts) {
         const majorityParty = Object.keys(counts).find(party => counts[party] >= 20);
@@ -1112,25 +1827,29 @@ jQuery(document).ready(function($) {
 	function initializeFlipPredictions() {
     console.log('📊 Initializing flip predictions...');
     
-    // FIRST: Check if we have a shared simulation from URL
-    const hasSharedSimulation = loadSimulationFromUrl();
-    
-    if (!hasSharedSimulation) {
-        // No shared simulation, initialize from current database state
-        console.log('📊 No shared simulation, using current database state...');
-        
-        Object.keys(constituencyData).forEach(id => {
-            const constituency = constituencyData[id];
-            flipPredictions[id] = constituency.current_party || 'PLP';
-        });
-        
-        updateSimulationStatus('Current State (2024)', false);
-    } else {
-        // We have shared simulation, show notification
-        showNotification('Shared simulation loaded successfully!', 'success');
+    // Check if we already have flip predictions (from shared simulation)
+    if (Object.keys(flipPredictions).length > 0) {
+        console.log('✅ Flip predictions already loaded from shared simulation');
+        // Update visuals with existing flip predictions
+        setTimeout(() => {
+            Object.keys(flipPredictions).forEach(id => {
+                updateConstituencyVisual(parseInt(id), flipPredictions[id]);
+            });
+            updateSeatCounts();
+        }, 100);
+        return;
     }
     
-    // Update visuals based on flip predictions
+    // Initialize from current database state if no shared simulation
+    console.log('📊 No shared simulation, using current database state...');
+    Object.keys(constituencyData).forEach(id => {
+        const constituency = constituencyData[id];
+        flipPredictions[id] = constituency.current_party || 'PLP';
+    });
+    
+    updateSimulationStatus('Current State (2024)', false);
+    
+    // Update visuals
     setTimeout(() => {
         Object.keys(flipPredictions).forEach(id => {
             updateConstituencyVisual(parseInt(id), flipPredictions[id]);
@@ -1184,7 +1903,6 @@ jQuery(document).ready(function($) {
         updateFlipPrediction(constituencyId, newParty);
         
         const constituencyName = constituencyData[constituencyId]?.constituency_name || `Constituency ${constituencyId}`;
-        showNotification(`${constituencyName} → Flip: ${PARTY_NAMES[newParty]}`, 'info', 2000);
     }
     
     // FLIP FEATURE: Reset flip predictions to 2021 results
@@ -1262,8 +1980,8 @@ jQuery(document).ready(function($) {
             // Update other info fields
             $('#info-constituency-name').text(constituency.constituency_name);
             $('#info-mp-full').text(constituency.current_mp || 'To Be Determined');
-            $('#info-current-party').text(`${PARTY_NAMES[currentParty]} (${currentParty})`);
-			$('#info-flip-prediction').text(`${PARTY_NAMES[flipPrediction]} (${flipPrediction})`);
+            $('#info-current-party').text(`${currentParty}`);
+			$('#info-flip-prediction').text(`${flipPrediction}`);
             $('#info-region').text(constituency.region || 'Unknown');
             
             if (isSelected) {
@@ -1299,43 +2017,93 @@ jQuery(document).ready(function($) {
         mpAvatarIcon.css('display', 'block');
     }
     
-    function shareSimulation() {
-    console.log('🔗 Sharing current simulation...');
+    // Updated shareSimulation function with database storage
+function shareSimulation() {
+    console.log('🔗 Sharing current simulation via database storage...');
     console.log('📊 Current flip predictions:', flipPredictions);
     
     const simulationData = {
         flipPredictions: flipPredictions,
         colorblind: isColorblindMode,
         timestamp: Date.now(),
-        version: '2.0' // Add version for future compatibility
+        version: '2.0'
     };
     
     console.log('📦 Packaging simulation data:', simulationData);
+    
+    // Show loading state
+    showNotification('Creating shareable link...', 'info', 1000);
+    
+    $.ajax({
+        url: bahamas_ajax.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'save_shared_simulation',
+            nonce: bahamas_ajax.nonce,
+            simulation_data: JSON.stringify(simulationData)
+        },
+        success: function(response) {
+            if (response.success) {
+                const shareUrl = response.data.share_url;
+                console.log('✅ Short share URL created:', shareUrl);
+                
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        showNotification(`Link Copied!`, 'success', 4000);
+                        console.log('✅ Short share URL copied to clipboard');
+                    }).catch(() => {
+                        console.warn('⚠️ Clipboard API failed, using fallback');
+                        fallbackCopyToClipboard(shareUrl);
+                        showNotification(`Short link created! (${response.data.share_code})`, 'success', 4000);
+                    });
+                } else {
+                    console.log('ℹ️ Using fallback copy method');
+                    fallbackCopyToClipboard(shareUrl);
+                    showNotification(`Short link created! (${response.data.share_code})`, 'success', 4000);
+                }
+            } else {
+                console.error('❌ Failed to create short link:', response.data);
+                showNotification('Failed to create short link. Using long URL...', 'warning');
+                // Fallback to old method
+                shareSimulationFallback();
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ AJAX error:', error);
+            console.error('❌ Response:', xhr.responseText);
+            showNotification('Error creating short link. Using long URL...', 'warning');
+            // Fallback to old method
+            shareSimulationFallback();
+        }
+    });
+}
+    // Fallback to original long URL method
+function shareSimulationFallback() {
+    const simulationData = {
+        flipPredictions: flipPredictions,
+        colorblind: isColorblindMode,
+        timestamp: Date.now(),
+        version: '2.0'
+    };
     
     try {
         const stateString = btoa(JSON.stringify(simulationData));
         const shareUrl = `${window.location.origin}${window.location.pathname}?simulation=${stateString}`;
         
-        console.log('🔗 Generated share URL (first 100 chars):', shareUrl.substring(0, 100) + '...');
-        
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(shareUrl).then(() => {
-                showNotification('Simulation link copied to clipboard!', 'success');
-                console.log('✅ Share URL copied to clipboard');
+                showNotification('Long simulation link copied to clipboard!', 'success');
             }).catch(() => {
-                console.warn('⚠️ Clipboard API failed, using fallback');
                 fallbackCopyToClipboard(shareUrl);
             });
         } else {
-            console.log('ℹ️ Using fallback copy method');
             fallbackCopyToClipboard(shareUrl);
         }
     } catch (error) {
-        console.error('❌ Error creating share URL:', error);
+        console.error('❌ Error creating fallback URL:', error);
         showNotification('Failed to create share link', 'error');
     }
 }
-    
     function fallbackCopyToClipboard(text) {
         const textArea = document.createElement('textarea');
         textArea.value = text;
@@ -1450,7 +2218,6 @@ jQuery(document).ready(function($) {
                     }, 200);
                     
                     console.log('✅ Enhanced SVG map loaded successfully');
-                    showNotification('Interactive SVG map loaded!', 'success');
                 } else {
                     console.warn('⚠️ SVG load failed, falling back to grid');
                     loadFallbackMap();
@@ -1757,72 +2524,21 @@ jQuery(document).ready(function($) {
         targetElement.addEventListener('touchend', handleDoubleTap, { passive: false });
         
         console.log('✅ Touch event listeners added to:', targetElement.tagName || targetElement.className);
-        
-        // Store functions globally for zoom controls
-        window.resetMapZoom = resetZoom;
-        window.zoomMapIn = function() {
-            if (currentScale < maxScale) {
-                currentScale = Math.min(maxScale, currentScale * 1.5);
-                updateTransform();
-                console.log('🔍 Manual zoom in:', currentScale);
-            }
-        };
-        window.zoomMapOut = function() {
-            if (currentScale > minScale) {
-                currentScale = Math.max(minScale, currentScale / 1.5);
-                if (currentScale <= 1.1) {
-                    translateX = 0;
-                    translateY = 0;
-                }
-                updateTransform();
-                console.log('🔍 Manual zoom out:', currentScale);
-            }
-        };
     }
 
-    // Add zoom control buttons for mobile
-    function addMobileZoomControls() {
-        // Only add on mobile devices
-        if (window.innerWidth <= 768 && !document.querySelector('#mobile-zoom-controls')) {
-            const controlsHtml = `
-                <div id="mobile-zoom-controls">
-                    <button id="zoom-in-btn" class="zoom-control-btn" title="Zoom In">+</button>
-                    <button id="zoom-out-btn" class="zoom-control-btn" title="Zoom Out">−</button>
-                    <button id="zoom-reset-btn" class="zoom-control-btn" title="Reset Zoom">⌂</button>
-                </div>
-            `;
-            
-            // Add controls to map container
-            const mapContainer = document.querySelector('#bahamas-map');
-            if (mapContainer) {
-                mapContainer.insertAdjacentHTML('beforeend', controlsHtml);
-                
-                // Add click handlers with debugging
-                document.getElementById('zoom-in-btn').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🔍 Zoom in button clicked');
-                    if (window.zoomMapIn) window.zoomMapIn();
-                });
-                
-                document.getElementById('zoom-out-btn').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🔍 Zoom out button clicked');
-                    if (window.zoomMapOut) window.zoomMapOut();
-                });
-                
-                document.getElementById('zoom-reset-btn').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🔍 Zoom reset button clicked');
-                    if (window.resetMapZoom) window.resetMapZoom();
-                });
-                
-                console.log('✅ Mobile zoom controls added and configured');
-            }
-        }
-    }
+    // UPDATED: Remove mobile zoom control buttons - fingers only zoom
+	function addMobileZoomControls() {
+		// REMOVED: No longer add zoom control buttons
+		// Users will only be able to zoom using pinch gestures
+		console.log('📱 Mobile zoom controls disabled - using pinch-to-zoom only');
+
+		// Remove any existing controls if they were added before
+		const existingControls = document.querySelector('#mobile-zoom-controls');
+		if (existingControls) {
+			existingControls.remove();
+			console.log('🗑️ Removed existing mobile zoom controls');
+		}
+	}
 
     // Enhanced constituency click handler for mobile
     function setupMobileConstituencyHandlers() {
@@ -1876,21 +2592,21 @@ jQuery(document).ready(function($) {
 
     // Enhanced mobile setup
     function enhanceForMobile() {
-        console.log('📱 Enhancing for mobile...');
-        
-        // Initialize mobile zoom
-        initializeMobileZoom();
-        
-        // Test touch capabilities
-        console.log('Touch support:', {
-            'ontouchstart in window': 'ontouchstart' in window,
-            'Touch events': typeof TouchEvent !== 'undefined',
-            'Pointer events': typeof PointerEvent !== 'undefined',
-            'Screen width': window.innerWidth
-        });
-        
-        console.log('✅ Mobile enhancements applied');
-    }
+    console.log('📱 Enhancing for mobile - pinch-to-zoom only...');
+    
+    // Initialize mobile zoom
+    initializeMobileZoom();
+    
+    // Test touch capabilities
+    console.log('Touch support:', {
+        'ontouchstart in window': 'ontouchstart' in window,
+        'Touch events': typeof TouchEvent !== 'undefined',
+        'Pointer events': typeof PointerEvent !== 'undefined',
+        'Screen width': window.innerWidth
+    });
+    
+    console.log('✅ Mobile enhancements applied - finger zoom only');
+}
 
     function loadFallbackMap() {
         const mapContainer = $('#bahamas-map');
@@ -1901,59 +2617,113 @@ jQuery(document).ready(function($) {
         showNotification('Using fallback grid view', 'info');
     }
     
-    function setupSocialShareListeners() {
-        const shareButtons = $('.social-share-buttons');
+    // NEW: Enhanced social share listener setup that works with cloned elements
+    function setupSocialShareListeners(container = null) {
+        console.log('🔗 Setting up social share listeners...');
+        
+        // If container is provided, only set up listeners for that container
+        // Otherwise, set up for all social share buttons
+        const targetContainer = container || document;
+        const shareButtons = targetContainer.querySelectorAll ? 
+            targetContainer.querySelectorAll('.social-share-btn') : 
+            $(targetContainer).find('.social-share-btn');
 
-        shareButtons.on('click', '.social-share-btn', function(e) {
-            e.preventDefault();
-
-            const platform = $(this).attr('id');
-            const shareText = 'Check out my Bahamas election simulation:';
-
-            // Generate the simulation URL
-            const stateString = btoa(JSON.stringify({
-                simulation: currentSimulation,
-                colorblind: isColorblindMode,
-                timestamp: Date.now()
-            }));
-            const simulationUrl = generateSimulationUrl();
-
-            let shareUrl;
-
-            switch (platform) {
-                case 'share-whatsapp':
-                    shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}%20${encodeURIComponent(simulationUrl)}`;
-                    break;
-                case 'share-facebook':
-                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(simulationUrl)}`;
-                    break;
-                case 'share-twitter':
-                    shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(simulationUrl)}&text=${encodeURIComponent(shareText)}`;
-                    break;
-                case 'share-tiktok':
-                    shareUrl = `https://www.tiktok.com/share?url=${encodeURIComponent(simulationUrl)}`;
-                    break;
-                case 'share-instagram':
-                    fallbackCopyToClipboard(simulationUrl);
-                    window.open('https://www.instagram.com/', '_blank');
-                    return;
-                case 'copy-link':
-                    fallbackCopyToClipboard(simulationUrl);
-                    return;
-            }
-
-            // Open the share URL in a new popup window
-            if (shareUrl) {
-                window.open(shareUrl, 'social-share-window', 'height=450,width=550');
-            }
-        });
-        console.log('✅ Social share listeners set up');
+        if (shareButtons.forEach) {
+            // Native NodeList
+            shareButtons.forEach(button => {
+                // Remove existing listeners to prevent duplicates
+                button.removeEventListener('click', handleSocialShare);
+                // Add new listener
+                button.addEventListener('click', handleSocialShare);
+            });
+        } else {
+            // jQuery object
+            shareButtons.off('click', handleSocialShare);
+            shareButtons.on('click', handleSocialShare);
+        }
+        
+        console.log('✅ Social share listeners set up for', shareButtons.length, 'buttons');
     }
+
+    // NEW: Social share handler function
+    function handleSocialShare(e) {
+    e.preventDefault();
+    
+    const platform = this.getAttribute('id');
+    const shareText = 'Check out my Bahamas election simulation:';
+    
+    console.log('📤 Sharing to platform:', platform);
+    
+    // Show loading state
+    showNotification('Creating share link...', 'info', 1000);
+    
+    generateSimulationUrl().then(simulationUrl => {
+        let shareUrl;
+        
+        switch (platform) {
+            case 'share-whatsapp':
+                shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}%20${encodeURIComponent(simulationUrl)}`;
+                break;
+            case 'share-facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(simulationUrl)}`;
+                break;
+            case 'share-twitter':
+                shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(simulationUrl)}&text=${encodeURIComponent(shareText)}`;
+                break;
+            case 'share-tiktok':
+                shareUrl = `https://www.tiktok.com/share?url=${encodeURIComponent(simulationUrl)}`;
+                break;
+            case 'share-instagram':
+                fallbackCopyToClipboard(simulationUrl);
+                window.open('https://www.instagram.com/', '_blank');
+                showNotification('Short link copied! Paste it in your Instagram story or bio.', 'info');
+                return;
+        }
+        
+        if (shareUrl) {
+            window.open(shareUrl, 'social-share-window', 'height=450,width=550');
+            showNotification('Opening share window...', 'info', 2000);
+        }
+    });
+}
     
 	function generateSimulationUrl() {
-    console.log('🔗 Generating simulation URL...');
-    console.log('📊 Current flip predictions:', flipPredictions);
+    console.log('🔗 Generating simulation URL for social sharing...');
     
+    return new Promise((resolve) => {
+        const simulationData = {
+            flipPredictions: flipPredictions,
+            colorblind: isColorblindMode,
+            timestamp: Date.now(),
+            version: '2.0'
+        };
+        
+        $.ajax({
+            url: bahamas_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'save_shared_simulation',
+                nonce: bahamas_ajax.nonce,
+                simulation_data: JSON.stringify(simulationData)
+            },
+            success: function(response) {
+                if (response.success) {
+                    console.log('✅ Short URL generated for social sharing');
+                    resolve(response.data.share_url);
+                } else {
+                    console.warn('⚠️ Failed to generate short URL, using fallback');
+                    resolve(generateLongSimulationUrl());
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ AJAX error in generateSimulationUrl:', error);
+                resolve(generateLongSimulationUrl());
+            }
+        });
+    });
+}
+// Helper function for long URL generation
+function generateLongSimulationUrl() {
     const simulationData = {
         flipPredictions: flipPredictions,
         colorblind: isColorblindMode,
@@ -1963,17 +2733,67 @@ jQuery(document).ready(function($) {
     
     try {
         const stateString = btoa(JSON.stringify(simulationData));
-        const simulationUrl = `${window.location.origin}${window.location.pathname}?simulation=${stateString}`;
-        
-        console.log('✅ Generated simulation URL');
-        return simulationUrl;
+        return `${window.location.origin}${window.location.pathname}?simulation=${stateString}`;
     } catch (error) {
-        console.error('❌ Error generating simulation URL:', error);
-        // Fallback to current page URL if generation fails
+        console.error('❌ Error generating long URL:', error);
         return window.location.href;
     }
 }
-	
+
+	function generateSimulationUrl() {
+    console.log('🔗 Generating simulation URL for social sharing...');
+    
+    // For social sharing, we'll use a Promise to handle the async database call
+    return new Promise((resolve) => {
+        const simulationData = {
+            flipPredictions: flipPredictions,
+            colorblind: isColorblindMode,
+            timestamp: Date.now(),
+            version: '2.0'
+        };
+        
+        $.ajax({
+            url: bahamas_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'save_shared_simulation',
+                nonce: bahamas_ajax.nonce,
+                simulation_data: JSON.stringify(simulationData)
+            },
+            success: function(response) {
+                if (response.success) {
+                    resolve(response.data.share_url);
+                } else {
+                    // Fallback to long URL
+                    resolve(generateLongSimulationUrl());
+                }
+            },
+            error: function() {
+                // Fallback to long URL
+                resolve(generateLongSimulationUrl());
+            }
+        });
+    });
+}
+
+// Helper function for long URL generation
+function generateLongSimulationUrl() {
+    const simulationData = {
+        flipPredictions: flipPredictions,
+        colorblind: isColorblindMode,
+        timestamp: Date.now(),
+        version: '2.0'
+    };
+    
+    try {
+        const stateString = btoa(JSON.stringify(simulationData));
+        return `${window.location.origin}${window.location.pathname}?simulation=${stateString}`;
+    } catch (error) {
+        console.error('❌ Error generating long URL:', error);
+        return window.location.href;
+    }
+}
+
     function generateEnhancedFallbackHTML() {
         let html = '<div class="enhanced-fallback-container">';
         
@@ -2082,56 +2902,155 @@ jQuery(document).ready(function($) {
     // Load simulation from URL if present
 function loadSimulationFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
-    const simulationParam = urlParams.get('simulation');
     
-    console.log('🔗 Checking for shared simulation in URL...');
-    
-    if (simulationParam) {
-        try {
-            const data = JSON.parse(atob(simulationParam));
-            console.log('📥 Found shared simulation data:', data);
-            
-            if (data.flipPredictions || data.simulation) {
-                // Support both old format (simulation) and new format (flipPredictions)
-                const predictions = data.flipPredictions || data.simulation;
-                
-                const validConstituencies = Object.keys(predictions).every(id => 
-                    id >= 1 && id <= 39 && PARTIES.includes(predictions[id])
-                );
-                
-                if (validConstituencies) {
-                    console.log('✅ Valid shared simulation found, loading...');
-                    
-                    // IMPORTANT: Set flip predictions BEFORE any initialization
-                    flipPredictions = { ...predictions };
-                    
-                    // Set colorblind mode if specified
-                    if (data.colorblind !== undefined) {
-                        isColorblindMode = data.colorblind;
-                        $('#colorblind-mode').prop('checked', isColorblindMode);
-                        if (isColorblindMode) {
-                            enableColorblindMode();
-                        }
-                    }
-                    
-                    // Mark as shared simulation
-                    updateSimulationStatus('Shared Simulation', true);
-                    
-                    console.log('🎯 Shared simulation loaded:', flipPredictions);
-                    return true; // Indicate that shared simulation was loaded
-                } else {
-                    console.error('❌ Invalid constituency data in shared simulation');
-                }
-            } else {
-                console.error('❌ No flip predictions found in shared simulation');
-            }
-        } catch (e) {
-            console.error('❌ Error parsing shared simulation:', e);
-            showNotification('Invalid simulation URL parameter', 'error');
-        }
-        }
+    // Check for short share code first
+    const shareCode = urlParams.get('share');
+    if (shareCode) {
+        console.log('🔗 Found share code in URL:', shareCode);
+        loadSharedSimulation(shareCode);
+        return true;
     }
     
+    // Check for long simulation parameter (backward compatibility)
+    const simulationParam = urlParams.get('simulation');
+    if (simulationParam) {
+        console.log('🔗 Found long simulation parameter in URL');
+        return loadLongSimulationFromUrl(simulationParam);
+    }
+    
+    return false;
+}
+	
+	// Load simulation using share code
+function loadSharedSimulation(shareCode) {
+    console.log('📥 Loading shared simulation with code:', shareCode);
+    
+    // Show loading notification
+    showNotification('Loading shared simulation...', 'info', 2000);
+    
+    $.ajax({
+        url: bahamas_ajax.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'load_shared_simulation',
+            nonce: bahamas_ajax.nonce,
+            share_code: shareCode
+        },
+        success: function(response) {
+            console.log('📥 AJAX Response:', response);
+            
+            if (response.success) {
+    try {
+        // Check if simulation_data is already an object or needs parsing
+        const data = typeof response.data.simulation_data === 'string' 
+            ? JSON.parse(response.data.simulation_data) 
+            : response.data.simulation_data;
+            
+        console.log('✅ Loaded shared simulation data:', data);
+        
+        if (data.flipPredictions) {
+            // CRITICAL: Set flipPredictions directly
+            flipPredictions = { ...data.flipPredictions };
+            
+            // Set colorblind mode if specified
+            if (data.colorblind !== undefined) {
+                isColorblindMode = data.colorblind;
+                $('#colorblind-mode').prop('checked', isColorblindMode);
+                $('.colorblind-toggle').prop('checked', isColorblindMode);
+                if (isColorblindMode) {
+                    enableColorblindMode();
+                }
+            }
+            
+            // Update status
+            updateSimulationStatus(`Shared Simulation (${shareCode})`, true);
+            
+            // Update visuals after a short delay
+            setTimeout(() => {
+                Object.keys(flipPredictions).forEach(id => {
+                    updateConstituencyVisual(parseInt(id), flipPredictions[id]);
+                });
+                updateSeatCounts();
+                clearConstituencyInfo();
+            }, 500);
+            
+            showNotification(`Shared simulation loaded! Views: ${response.data.view_count}`, 'success', 4000);
+            console.log('🎯 Shared simulation loaded successfully');
+            
+        } else {
+            console.error('❌ No flipPredictions found in shared simulation data');
+            showNotification('Invalid shared simulation data', 'error');
+        }
+    } catch (e) {
+        console.error('❌ Error parsing shared simulation data:', e);
+        console.error('❌ Raw data:', response.data.simulation_data);
+        showNotification('Error parsing shared simulation', 'error');
+    }
+} else {
+                console.error('❌ Failed to load shared simulation:', response.data);
+                showNotification(`Simulation not found: ${response.data || 'Unknown error'}`, 'error');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('❌ AJAX error loading shared simulation:', error);
+            console.error('❌ Status:', status);
+            console.error('❌ Response:', xhr.responseText);
+            showNotification('Network error loading shared simulation', 'error');
+        }
+    });
+}
+    function loadLongSimulationFromUrl(simulationParam) {
+    try {
+        const data = JSON.parse(atob(simulationParam));
+        console.log('📥 Found long simulation data:', data);
+        
+        if (data.flipPredictions || data.simulation) {
+            const predictions = data.flipPredictions || data.simulation;
+            
+            const validConstituencies = Object.keys(predictions).every(id => 
+                id >= 1 && id <= 39 && PARTIES.includes(predictions[id])
+            );
+            
+            if (validConstituencies) {
+                console.log('✅ Valid long simulation found, loading...');
+                
+                flipPredictions = { ...predictions };
+                
+                if (data.colorblind !== undefined) {
+                    isColorblindMode = data.colorblind;
+                    $('#colorblind-mode').prop('checked', isColorblindMode);
+                    $('.colorblind-toggle').prop('checked', isColorblindMode);
+                    if (isColorblindMode) {
+                        enableColorblindMode();
+                    }
+                }
+                
+                updateSimulationStatus('Shared Simulation (Legacy)', true);
+                showNotification('Shared simulation loaded successfully!', 'success');
+                
+                // Update visuals
+                setTimeout(() => {
+                    Object.keys(flipPredictions).forEach(id => {
+                        updateConstituencyVisual(parseInt(id), flipPredictions[id]);
+                    });
+                    updateSeatCounts();
+                }, 100);
+                
+                console.log('🎯 Long simulation loaded:', flipPredictions);
+                return true;
+            } else {
+                console.error('❌ Invalid constituency data in long simulation');
+            }
+        } else {
+            console.error('❌ No flip predictions found in long simulation');
+        }
+    } catch (e) {
+        console.error('❌ Error parsing long simulation:', e);
+        showNotification('Invalid simulation URL parameter', 'error');
+    }
+    
+    return false;
+}
     // Load simulation from URL after initialization
     setTimeout(loadSimulationFromUrl, 500);
     
@@ -2252,7 +3171,7 @@ function loadSimulationFromUrl() {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: 30px;
+            margin-top: 0px;
             padding: 15px;
             background: #e9ecef;
             border-radius: 12px;
@@ -2260,7 +3179,7 @@ function loadSimulationFromUrl() {
         }
 
         .social-share-label {
-            font-size: 16px;
+            font-size: 30px;
             font-weight: bold;
             color: #495057;
             margin-right: 15px;
@@ -2294,6 +3213,7 @@ function loadSimulationFromUrl() {
             #bahamas-election-container {
                 width: 100%;
                 padding: 10px;
+				margin-top: 55px;
             }
         }
 
