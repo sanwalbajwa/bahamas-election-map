@@ -6,7 +6,7 @@
  * Version: 2.1.0
  * Author: Sanwal Bajwa
  * License: GPL v2 or later
- */
+ */ 
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
