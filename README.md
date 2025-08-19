@@ -6,7 +6,7 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6%2B-yellow.svg)
 
 An interactive WordPress plugin that displays all 39 Bahamian parliamentary constituencies with real-time election simulation capabilities. Built with a focus on Nassau/New Providence's 24 constituencies while maintaining full coverage of Grand Bahama and the Family Islands.
-
+ 
 ## 🌟 Features
 
 ### 🗺️ Interactive Mapping
