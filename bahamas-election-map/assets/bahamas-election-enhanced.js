@@ -1485,38 +1485,53 @@ function injectEnhancedStickyStyles() {
 				toggleColorblindMode();
 			}
     	});
+		
        $(document).on('click', '.social-share-label', function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log('🔗 Share icon clicked - generating short link...');
-    
-    // Show loading state
-    showNotification('Creating shareable link...', 'info', 1000);
-    
-    // Generate the simulation URL (returns a Promise)
-    generateSimulationUrl().then(simulationUrl => {
-        // Copy to clipboard
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(simulationUrl).then(() => {
-                showShareIconFeedback($(this));
-                showNotification('Short link copied to clipboard! 📋', 'success', 3000);
-                console.log('✅ Short simulation URL copied to clipboard via share icon:', simulationUrl);
-            }).catch((error) => {
-                console.warn('⚠️ Clipboard API failed, using fallback');
+
+    const button = $(this);
+
+    // 🔹 Check membership before doing anything
+    $.post(bahamas_ajax.ajax_url, {
+        action: 'check_membership_access'
+    }, function(res) {
+        if (!res.has_membership) {
+			showMembershipPopup(res.logged_in);
+			return;
+		}
+
+        console.log('🔗 Share icon clicked - generating short link...');
+
+        // Show loading state
+        showNotification('Creating shareable link...', 'info', 1000);
+
+        // Generate the simulation URL (returns a Promise)
+        generateSimulationUrl().then(simulationUrl => {
+            // Copy to clipboard
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(simulationUrl).then(() => {
+                    showShareIconFeedback(button);
+                    showNotification('Short link copied to clipboard! 📋', 'success', 3000);
+                    console.log('✅ Short simulation URL copied to clipboard via share icon:', simulationUrl);
+                }).catch((error) => {
+                    console.warn('⚠️ Clipboard API failed, using fallback');
+                    fallbackCopyToClipboard(simulationUrl);
+                    showShareIconFeedback(button);
+                });
+            } else {
+                console.log('ℹ️ Using fallback copy method for share icon');
                 fallbackCopyToClipboard(simulationUrl);
-                showShareIconFeedback($(this));
-            });
-        } else {
-            console.log('ℹ️ Using fallback copy method for share icon');
-            fallbackCopyToClipboard(simulationUrl);
-            showShareIconFeedback($(this));
-        }
-    }).catch(error => {
-        console.error('❌ Failed to generate share URL:', error);
-        showNotification('Failed to create share link', 'error');
-    });
+                showShareIconFeedback(button);
+            }
+        }).catch(error => {
+            console.error('❌ Failed to generate share URL:', error);
+            showNotification('Failed to create share link', 'error');
+        });
+
+    }, 'json');
 });
+
     
     console.log('✅ Share icon click handler setup complete');
         // Download SVG
@@ -2019,64 +2034,71 @@ function injectEnhancedStickyStyles() {
     
     // Updated shareSimulation function with database storage
 function shareSimulation() {
-    console.log('🔗 Sharing current simulation via database storage...');
-    console.log('📊 Current flip predictions:', flipPredictions);
-    
-    const simulationData = {
-        flipPredictions: flipPredictions,
-        colorblind: isColorblindMode,
-        timestamp: Date.now(),
-        version: '2.0'
-    };
-    
-    console.log('📦 Packaging simulation data:', simulationData);
-    
-    // Show loading state
-    showNotification('Creating shareable link...', 'info', 1000);
-    
-    $.ajax({
-        url: bahamas_ajax.ajax_url,
-        type: 'POST',
-        data: {
-            action: 'save_shared_simulation',
-            nonce: bahamas_ajax.nonce,
-            simulation_data: JSON.stringify(simulationData)
-        },
-        success: function(response) {
-            if (response.success) {
-                const shareUrl = response.data.share_url;
-                console.log('✅ Short share URL created:', shareUrl);
-                
-                if (navigator.clipboard && window.isSecureContext) {
-                    navigator.clipboard.writeText(shareUrl).then(() => {
-                        showNotification(`Link Copied!`, 'success', 4000);
-                        console.log('✅ Short share URL copied to clipboard');
-                    }).catch(() => {
-                        console.warn('⚠️ Clipboard API failed, using fallback');
+    // Step 1: Check login & membership before doing anything
+    $.post(bahamas_ajax.ajax_url, {
+        action: 'check_membership_access'
+    }, function(res) {
+        if (!res.has_membership) {
+			showMembershipPopup(res.logged_in);
+			return;
+		}
+
+        // ✅ Step 2: Only runs if logged in & has membership
+        const simulationData = {
+            flipPredictions: flipPredictions,
+            colorblind: isColorblindMode,
+            timestamp: Date.now(),
+            version: '2.0'
+        };
+
+        console.log('📦 Packaging simulation data:', simulationData);
+
+        showNotification('Creating shareable link...', 'info', 1000);
+
+        $.ajax({
+            url: bahamas_ajax.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'save_shared_simulation',
+                nonce: bahamas_ajax.nonce,
+                simulation_data: JSON.stringify(simulationData)
+            },
+            success: function(response) {
+                if (response.success) {
+                    const shareUrl = response.data.share_url;
+                    console.log('✅ Short share URL created:', shareUrl);
+
+                    if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(shareUrl).then(() => {
+                            showNotification(`Link Copied!`, 'success', 4000);
+                            console.log('✅ Short share URL copied to clipboard');
+                        }).catch(() => {
+                            console.warn('⚠️ Clipboard API failed, using fallback');
+                            fallbackCopyToClipboard(shareUrl);
+                            showNotification(`Short link created! (${response.data.share_code})`, 'success', 4000);
+                        });
+                    } else {
+                        console.log('ℹ️ Using fallback copy method');
                         fallbackCopyToClipboard(shareUrl);
                         showNotification(`Short link created! (${response.data.share_code})`, 'success', 4000);
-                    });
+                    }
                 } else {
-                    console.log('ℹ️ Using fallback copy method');
-                    fallbackCopyToClipboard(shareUrl);
-                    showNotification(`Short link created! (${response.data.share_code})`, 'success', 4000);
+                    console.error('❌ Failed to create short link:', response.data);
+                    showNotification('Failed to create short link. Using long URL...', 'warning');
+                    shareSimulationFallback();
                 }
-            } else {
-                console.error('❌ Failed to create short link:', response.data);
-                showNotification('Failed to create short link. Using long URL...', 'warning');
-                // Fallback to old method
+            },
+            error: function(xhr, status, error) {
+                console.error('❌ AJAX error:', error);
+                console.error('❌ Response:', xhr.responseText);
+                showNotification('Error creating short link. Using long URL...', 'warning');
                 shareSimulationFallback();
             }
-        },
-        error: function(xhr, status, error) {
-            console.error('❌ AJAX error:', error);
-            console.error('❌ Response:', xhr.responseText);
-            showNotification('Error creating short link. Using long URL...', 'warning');
-            // Fallback to old method
-            shareSimulationFallback();
-        }
-    });
+        });
+
+    }, 'json');
 }
+
     // Fallback to original long URL method
 function shareSimulationFallback() {
     const simulationData = {
@@ -2648,44 +2670,55 @@ function shareSimulationFallback() {
     // NEW: Social share handler function
     function handleSocialShare(e) {
     e.preventDefault();
-    
+
     const platform = this.getAttribute('id');
     const shareText = 'Check out my Bahamas election simulation:';
-    
-    console.log('📤 Sharing to platform:', platform);
-    
-    // Show loading state
-    showNotification('Creating share link...', 'info', 1000);
-    
-    generateSimulationUrl().then(simulationUrl => {
-        let shareUrl;
-        
-        switch (platform) {
-            case 'share-whatsapp':
-                shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}%20${encodeURIComponent(simulationUrl)}`;
-                break;
-            case 'share-facebook':
-                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(simulationUrl)}`;
-                break;
-            case 'share-twitter':
-                shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(simulationUrl)}&text=${encodeURIComponent(shareText)}`;
-                break;
-            case 'share-tiktok':
-                shareUrl = `https://www.tiktok.com/share?url=${encodeURIComponent(simulationUrl)}`;
-                break;
-            case 'share-instagram':
-                fallbackCopyToClipboard(simulationUrl);
-                window.open('https://www.instagram.com/', '_blank');
-                showNotification('Short link copied! Paste it in your Instagram story or bio.', 'info');
-                return;
-        }
-        
-        if (shareUrl) {
-            window.open(shareUrl, 'social-share-window', 'height=450,width=550');
-            showNotification('Opening share window...', 'info', 2000);
-        }
-    });
+
+    // 🔹 Check membership first
+    $.post(bahamas_ajax.ajax_url, {
+        action: 'check_membership_access'
+    }, function(res) {
+        if (!res.has_membership) {
+			showMembershipPopup(res.logged_in);
+			return;
+		}
+
+        console.log('📤 Sharing to platform:', platform);
+
+        // Show loading state
+        showNotification('Creating share link...', 'info', 1000);
+
+        generateSimulationUrl().then(simulationUrl => {
+            let shareUrl;
+
+            switch (platform) {
+                case 'share-whatsapp':
+                    shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}%20${encodeURIComponent(simulationUrl)}`;
+                    break;
+                case 'share-facebook':
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(simulationUrl)}`;
+                    break;
+                case 'share-twitter':
+                    shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(simulationUrl)}&text=${encodeURIComponent(shareText)}`;
+                    break;
+                case 'share-tiktok':
+                    shareUrl = `https://www.tiktok.com/share?url=${encodeURIComponent(simulationUrl)}`;
+                    break;
+                case 'share-instagram':
+                    fallbackCopyToClipboard(simulationUrl);
+                    window.open('https://www.instagram.com/', '_blank');
+                    showNotification('Short link copied! Paste it in your Instagram story or bio.', 'info');
+                    return;
+            }
+
+            if (shareUrl) {
+                window.open(shareUrl, 'social-share-window', 'height=450,width=550');
+                showNotification('Opening share window...', 'info', 2000);
+            }
+        });
+    }, 'json');
 }
+
     
 	function generateSimulationUrl() {
     console.log('🔗 Generating simulation URL for social sharing...');
@@ -3229,4 +3262,54 @@ function loadSharedSimulation(shareCode) {
     if ($('#bahamas-additional-styles').length === 0) {
         $('head').append(additionalStyles);
     }
+});
+// Membership popup
+function showMembershipPopup(isLoggedIn) {
+    const popup = jQuery('#membership-popup');
+    const buttonsContainer = jQuery('#membership-popup-buttons');
+    const message = jQuery('#membership-popup-message');
+    
+    // Reset previous buttons
+    buttonsContainer.empty();
+    
+    if (isLoggedIn) {
+        message.text('You need to buy a membership to access this feature.');
+        buttonsContainer.append(
+            `<a href="https://pollwatchbahamas.com/membership-checkout/?pmpro_level=1" 
+                class="popup-btn popup-btn-primary">
+                <i class="popup-icon">💎</i>
+                Buy Membership
+             </a>`
+        );
+    } else {
+        message.text('Please log in or buy a membership to access this feature.');
+        buttonsContainer.append(
+            `<a href="https://pollwatchbahamas.com/login/" 
+                class="popup-btn popup-btn-secondary">
+                <i class="popup-icon">🔐</i>
+                Login
+             </a>`
+        );
+        buttonsContainer.append(
+            `<a href="https://pollwatchbahamas.com/membership-checkout/?pmpro_level=1" 
+                class="popup-btn popup-btn-primary">
+                <i class="popup-icon">💎</i>
+                Buy Membership
+             </a>`
+        );
+    }
+    
+    popup.addClass('popup-show').fadeIn(300);
+}
+
+// Close popup with animation
+jQuery(document).on('click', '#membership-popup-close, #membership-popup-overlay', function (e) {
+    if (e.target === this) {
+        jQuery('#membership-popup').removeClass('popup-show').fadeOut(300);
+    }
+});
+
+// Prevent closing when clicking inside the popup content
+jQuery(document).on('click', '#membership-popup-content', function (e) {
+    e.stopPropagation();
 });
