@@ -6,11 +6,11 @@
  * Version: 2.1.0
  * Author: Sanwal Bajwa
  * License: GPL v2 or later
- */ 
+ */
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
-    exit; 
+    exit;
 }
 
 // Define plugin constants
@@ -2201,3 +2201,262 @@ private function generate_share_code($length = 6) {
 
 // Initialize the enhanced plugin
 new BahamasElectionMapEnhanced();
+
+
+// Membership Popup
+add_action('wp_ajax_check_membership_access', 'pw_check_membership_access');
+add_action('wp_ajax_nopriv_check_membership_access', 'pw_check_membership_access');
+
+function pw_check_membership_access() {
+    $user_id = get_current_user_id();
+
+    $has_membership = function_exists('pmpro_hasMembershipLevel')
+        ? pmpro_hasMembershipLevel(null, $user_id) // Any active membership
+        : false;
+
+    wp_send_json([
+        'logged_in'      => is_user_logged_in(),
+        'has_membership' => $has_membership
+    ]);
+}
+function membership_info() {
+    ?>
+    <div id="membership-popup" class="membership-popup">
+        <div id="membership-popup-overlay" class="popup-overlay">
+            <div id="membership-popup-content" class="popup-content">
+                <div class="popup-header">
+                    <div class="popup-icon-large">🚀</div>
+                    <h2 class="popup-title">Membership Required</h2>
+                    <button id="membership-popup-close" class="popup-close">&times;</button>
+                </div>
+                
+                <div class="popup-body">
+                    <p id="membership-popup-message" class="popup-message">
+                        You need an active membership to use this feature.
+                    </p>
+                    <div id="membership-popup-buttons" class="popup-buttons"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .membership-popup {
+            display: none;
+            position: fixed;
+            z-index: 99999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        .popup-overlay {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .popup-content {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 100%;
+            transform: scale(0.9);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .popup-show .popup-content {
+            transform: scale(1);
+        }
+
+        .popup-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .popup-icon-large {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .popup-title {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .popup-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .popup-body {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .popup-message {
+            color: #555;
+            font-size: 18px;
+            line-height: 1.6;
+            margin: 0 0 30px 0;
+        }
+
+        .popup-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .popup-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .popup-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .popup-btn:hover::before {
+            left: 100%;
+        }
+
+        .popup-btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .popup-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
+        }
+
+        .popup-btn-secondary {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(116, 185, 255, 0.4);
+        }
+
+        .popup-btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(116, 185, 255, 0.6);
+        }
+
+        .popup-icon {
+            font-size: 20px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 480px) {
+            .popup-content {
+                margin: 0 15px;
+                border-radius: 15px;
+            }
+
+            .popup-header {
+                padding: 25px 15px 15px;
+            }
+
+            .popup-title {
+                font-size: 24px;
+            }
+
+            .popup-body {
+                padding: 20px 15px;
+            }
+
+            .popup-message {
+                font-size: 16px;
+            }
+
+            .popup-btn {
+                padding: 14px 20px;
+                font-size: 15px;
+            }
+        }
+
+        /* Animation keyframes */
+        @keyframes popupSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .popup-show .popup-content {
+            animation: popupSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Glassmorphism effect for modern browsers */
+        @supports (backdrop-filter: blur()) {
+            .popup-overlay {
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(12px);
+            }
+        }
+    </style>
+    <?php
+}
+add_action('wp_footer', 'membership_info');
