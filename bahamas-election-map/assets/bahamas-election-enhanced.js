@@ -1486,20 +1486,20 @@ function injectEnhancedStickyStyles() {
 			}
     	});
 		
-       $(document).on('click', '.social-share-label', function(e) {
+$(document).on('click', '.social-share-label', function(e) {
     e.preventDefault();
     e.stopPropagation();
 
     const button = $(this);
 
-    // 🔹 Check membership before doing anything
+    // 🔹 Check login status only (no membership check)
     $.post(bahamas_ajax.ajax_url, {
         action: 'check_membership_access'
     }, function(res) {
-        if (!res.has_membership) {
-			showMembershipPopup(res.logged_in);
-			return;
-		}
+        if (!res.logged_in) {
+            showMembershipPopup(res.logged_in);
+            return;
+        }
 
         console.log('🔗 Share icon clicked - generating short link...');
 
@@ -1508,6 +1508,12 @@ function injectEnhancedStickyStyles() {
 
         // Generate the simulation URL (returns a Promise)
         generateSimulationUrl().then(simulationUrl => {
+            // Ensure we have a valid URL
+            if (!simulationUrl) {
+                showNotification('Failed to create share link', 'error');
+                return;
+            }
+
             // Copy to clipboard
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(simulationUrl).then(() => {
@@ -1518,11 +1524,13 @@ function injectEnhancedStickyStyles() {
                     console.warn('⚠️ Clipboard API failed, using fallback');
                     fallbackCopyToClipboard(simulationUrl);
                     showShareIconFeedback(button);
+                    showNotification('Short link copied to clipboard! 📋', 'success', 3000);
                 });
             } else {
                 console.log('ℹ️ Using fallback copy method for share icon');
                 fallbackCopyToClipboard(simulationUrl);
                 showShareIconFeedback(button);
+                showNotification('Short link copied to clipboard! 📋', 'success', 3000);
             }
         }).catch(error => {
             console.error('❌ Failed to generate share URL:', error);
@@ -1562,7 +1570,13 @@ function injectEnhancedStickyStyles() {
         
         console.log('✅ Event listeners set up');
     }
-
+    // Add visual feedback for share icon click
+    function showShareIconFeedback(button) {
+        button.addClass('share-icon-clicked');
+        setTimeout(() => {
+            button.removeClass('share-icon-clicked');
+        }, 600);
+    }
     function setupConstituencyHandlers() {
         console.log('🔧 Setting up constituency handlers...');
         
@@ -2034,14 +2048,14 @@ function injectEnhancedStickyStyles() {
     
     // Updated shareSimulation function with database storage
 function shareSimulation() {
-    // Step 1: Check login & membership before doing anything
+    // Step 1: Check login status only (no membership check)
     $.post(bahamas_ajax.ajax_url, {
         action: 'check_membership_access'
     }, function(res) {
-        if (!res.has_membership) {
-			showMembershipPopup(res.logged_in);
-			return;
-		}
+        if (!res.logged_in) {
+            showMembershipPopup(res.logged_in);
+            return;
+        }
 
         // ✅ Step 2: Only runs if logged in & has membership
         const simulationData = {
@@ -2668,21 +2682,20 @@ function shareSimulationFallback() {
     }
 
     // NEW: Social share handler function
-    function handleSocialShare(e) {
+function handleSocialShare(e) {
     e.preventDefault();
 
     const platform = this.getAttribute('id');
     const shareText = 'Check out my Bahamas election simulation:';
 
-    // 🔹 Check membership first
+    // 🔹 Check login status only (no membership check)
     $.post(bahamas_ajax.ajax_url, {
         action: 'check_membership_access'
     }, function(res) {
-        if (!res.has_membership) {
-			showMembershipPopup(res.logged_in);
-			return;
-		}
-
+        if (!res.logged_in) {
+            showMembershipPopup(res.logged_in);
+            return;
+        }
         console.log('📤 Sharing to platform:', platform);
 
         // Show loading state
@@ -3264,6 +3277,7 @@ function loadSharedSimulation(shareCode) {
     }
 });
 // Membership popup
+// Membership popup
 function showMembershipPopup(isLoggedIn) {
     const popup = jQuery('#membership-popup');
     const buttonsContainer = jQuery('#membership-popup-buttons');
@@ -3272,29 +3286,19 @@ function showMembershipPopup(isLoggedIn) {
     // Reset previous buttons
     buttonsContainer.empty();
     
-    if (isLoggedIn) {
-        message.text('You need to buy a membership to access this feature.');
+    if (!isLoggedIn) {
+        // Not logged in - show both Register and Login buttons
+        message.text('Please login or register to access this feature.');
         buttonsContainer.append(
-            `<a href="https://pollwatchbahamas.com/membership-checkout/?pmpro_level=1" 
+            `<a href="/register/" 
                 class="popup-btn popup-btn-primary">
-                <i class="popup-icon">💎</i>
-                Buy Membership
-             </a>`
-        );
-    } else {
-        message.text('Please log in or buy a membership to access this feature.');
-        buttonsContainer.append(
-            `<a href="https://pollwatchbahamas.com/login/" 
+                <i class="popup-icon">📝</i>
+                Register
+             </a>
+             <a href="/our-community/" 
                 class="popup-btn popup-btn-secondary">
-                <i class="popup-icon">🔐</i>
+                <i class="popup-icon">🔑</i>
                 Login
-             </a>`
-        );
-        buttonsContainer.append(
-            `<a href="https://pollwatchbahamas.com/membership-checkout/?pmpro_level=1" 
-                class="popup-btn popup-btn-primary">
-                <i class="popup-icon">💎</i>
-                Buy Membership
              </a>`
         );
     }
