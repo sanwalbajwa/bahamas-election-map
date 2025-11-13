@@ -4,7 +4,7 @@
  * Plugin URI: https://sanwalbajwa.live/
  * Description: Interactive election simulation tool for all 39 Bahamian constituencies with admin panel
  * Version: 2.1.0
- * Author: Sanwal Bajwa 
+ * Author: Sanwal Bajwa
  * License: GPL v2 or later
  */
 
@@ -2225,14 +2225,14 @@ function membership_info() {
         <div id="membership-popup-overlay" class="popup-overlay">
             <div id="membership-popup-content" class="popup-content">
                 <div class="popup-header">
-                    <div class="popup-icon-large">🚀</div>
-                    <h2 class="popup-title">Membership Required</h2>
+                    <div class="popup-icon-large"></div>
+                    <h2 class="popup-title">Signup Required</h2>
                     <button id="membership-popup-close" class="popup-close">&times;</button>
                 </div>
                 
                 <div class="popup-body">
                     <p id="membership-popup-message" class="popup-message">
-                        You need an active membership to use this feature.
+                        You need an active account to use this feature.
                     </p>
                     <div id="membership-popup-buttons" class="popup-buttons"></div>
                 </div>
