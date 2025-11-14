@@ -366,9 +366,9 @@ jQuery(document).ready(function($) {
                 #bahamas-map {
                     background: white !important;
                     border-radius: 15px !important;
-                    padding: 20px !important;
+                    padding: 100px 0px 0px 0px !important;
                     min-height: 800px !important;
-                    width: 80% !important;
+                    width: 100% !important;
                     display: flex !important;
                     align-items: center !important;
                     justify-content: flex-start !important;
