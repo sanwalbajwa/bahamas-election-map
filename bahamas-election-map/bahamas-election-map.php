@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Bahamas Interactive Election Map - Enhanced
- * Plugin URI: https://sanwalbajwa.live/
+ * Plugin URI: https://sanwalbajwa.com/
  * Description: Interactive election simulation tool for all 39 Bahamian constituencies with admin panel
  * Version: 2.1.0
  * Author: Sanwal Bajwa
