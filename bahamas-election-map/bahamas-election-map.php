@@ -10,7 +10,7 @@
 
 // Prevent direct access
 if (!defined('ABSPATH')) {
-    exit;
+    exit; 
 }
 
 // Define plugin constants
